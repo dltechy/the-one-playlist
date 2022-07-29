@@ -12,10 +12,12 @@
     "test:cov": "yarn lerna:base 'cd {} && yarn test:cov'",
     "test:cov:int": "yarn lerna:base 'cd {} && yarn test:cov:int'",
     "test:cov:all": "yarn lerna:base 'cd {} && yarn test:cov:all'",
-    "precommit": "yarn --silent lerna ls -pa --since HEAD | xargs -I {} bash -c 'cd {} && yarn precommit || exit 255'"
+    "precommit": "yarn --silent lerna ls -pa --since HEAD | xargs -I {} bash -c 'cd {} && yarn precommit || exit 255'",
+    "prepare": "husky install"
   },
   "dependencies": {},
   "devDependencies": {
+    "husky": "^8.0.1",
     "lerna": "^5.3.0"
   }
 }

@@ -1,0 +1,21 @@
+{
+  "name": "the-one-playlist",
+  "private": true,
+  "scripts": {
+    "lerna:base": "yarn --silent lerna ls -pa | xargs -I {} bash -c",
+    "install:all": "yarn install && yarn lerna:base 'cd {} && yarn install || exit 255'",
+    "lint": "yarn lerna:base 'cd {} && yarn lint'",
+    "lint:fix": "yarn lerna:base 'cd {} && yarn lint:fix'",
+    "test": "yarn lerna:base 'cd {} && yarn test'",
+    "test:int": "yarn lerna:base 'cd {} && yarn test:int'",
+    "test:all": "yarn lerna:base 'cd {} && yarn test:all'",
+    "test:cov": "yarn lerna:base 'cd {} && yarn test:cov'",
+    "test:cov:int": "yarn lerna:base 'cd {} && yarn test:cov:int'",
+    "test:cov:all": "yarn lerna:base 'cd {} && yarn test:cov:all'",
+    "precommit": "yarn --silent lerna ls -pa --since HEAD | xargs -I {} bash -c 'cd {} && yarn precommit || exit 255'"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "lerna": "^5.3.0"
+  }
+}

@@ -40,6 +40,17 @@
       "console": "integratedTerminal",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["test:all"]
+    },
+
+    // Web
+    {
+      "name": "Web: Launch via Yarn",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/packages/web",
+      "console": "integratedTerminal",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["dev"]
     }
   ]
 }

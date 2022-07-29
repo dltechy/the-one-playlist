@@ -8,6 +8,11 @@ Play media from multiple sources in a single playlist
 
   - Package Link: [./packages/server](./packages/server)
   - README Link: [./packages/server/README.md](./packages/server/README.md)
+<!-- Comment used for spacing -->
+- ### <img src="https://camo.githubusercontent.com/92ec9eb7eeab7db4f5919e3205918918c42e6772562afb4112a2909c1aaaa875/68747470733a2f2f6173736574732e76657263656c2e636f6d2f696d6167652f75706c6f61642f76313630373535343338352f7265706f7369746f726965732f6e6578742d6a732f6e6578742d6c6f676f2e706e67" width="50" align="center" alt="Next.js Logo" /> Web
+
+  - Package Link: [./packages/web](./packages/web)
+  - README Link: [./packages/web/README.md](./packages/web/README.md)
 
 ## Scripts
 
@@ -59,3 +64,9 @@ Play media from multiple sources in a single playlist
   - Adds syntax highlighting, linting, code completion, formatting, jump-to-definition and more for Prisma Schema files
     - Extension Link: [vscode:extension/Prisma.prisma](vscode:extension/Prisma.prisma)
     - Website Link: [https://marketplace.visualstudio.com/items?itemName=Prisma.prisma](https://marketplace.visualstudio.com/items?itemName=Prisma.prisma)
+<!-- Comment used for spacing -->
+- ### <img src="https://formulahendry.gallerycdn.vsassets.io/extensions/formulahendry/auto-rename-tag/0.1.10/1644319230173/Microsoft.VisualStudio.Services.Icons.Default" width="50" align="center" alt="Auto Rename Tag Logo" /> Auto Rename Tag
+
+  - Automatically rename paired HTML/XML tag, same as Visual Studio IDE does
+    - Extension Link: [vscode:extension/formulahendry.auto-rename-tag](vscode:extension/formulahendry.auto-rename-tag)
+    - Website Link: [https://marketplace.visualstudio.com/items?itemName=formulahendry.auto-rename-tag](https://marketplace.visualstudio.com/items?itemName=formulahendry.auto-rename-tag)

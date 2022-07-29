@@ -1,25 +1,51 @@
 {
   "name": "the-one-playlist-web",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "prebuild": "rimraf .next",
+    "dev": "dotenv -e .env -- next dev -p %PORT%",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "precommit": "echo todo"
+    "start": "dotenv -e .env -- next start -p %PORT%",
+    "lint": "eslint --max-warnings=0 \"src/**/*.{ts,tsx}\"",
+    "lint:fix": "eslint --max-warnings=0 --fix \"src/**/*.{ts,tsx}\"",
+    "precommit": "lint-staged"
   },
   "dependencies": {
-    "next": "12.2.3",
+    "@babel/core": "^7.18.9",
+    "@emotion/cache": "^11.10.0",
+    "@emotion/react": "^11.9.3",
+    "@emotion/server": "^11.10.0",
+    "@emotion/styled": "^11.10.0",
+    "@mui/icons-material": "^5.8.4",
+    "@mui/material": "^5.9.2",
+    "axios": "^0.27.2",
+    "dotenv-cli": "^6.0.0",
+    "next": "^12.2.5",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   },
   "devDependencies": {
+    "@emotion/babel-plugin": "^11.9.5",
+    "@emotion/eslint-plugin": "^11.7.0",
     "@types/node": "18.6.2",
     "@types/react": "18.0.15",
     "@types/react-dom": "18.0.6",
+    "@typescript-eslint/eslint-plugin": "^5.31.0",
+    "@typescript-eslint/parser": "^5.31.0",
     "eslint": "8.20.0",
+    "eslint-config-airbnb": "^19.0.4",
     "eslint-config-next": "12.2.3",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-import-resolver-typescript": "^3.3.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jsx-a11y": "^6.6.1",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-react": "^7.30.1",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-simple-import-sort": "^7.0.0",
+    "lint-staged": "^13.0.3",
+    "prettier": "^2.7.1",
     "typescript": "4.7.4"
   }
 }

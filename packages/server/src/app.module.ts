@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { validate } from './config/config.validation';
+import { YouTubeModule } from './modules/youtube/youtube.module';
 
 @Module({
   imports: [
@@ -9,6 +10,8 @@ import { validate } from './config/config.validation';
       isGlobal: true,
       validate,
     }),
+
+    YouTubeModule,
   ],
 })
 export class AppModule {}

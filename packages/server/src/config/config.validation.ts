@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 
 import { AppConfig } from './app.config';
+import { YouTubeConfig } from './youtube.config';
 
 export enum Environment {
   Development = 'development',
@@ -36,10 +37,15 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   public APP_BASE_URL: string;
+
+  @IsString()
+  @IsNotEmpty()
+  public YOUTUBE_API_KEY: string;
 }
 
 export function validate(config: Record<string, unknown>): {
   app: AppConfig;
+  youtube: YouTubeConfig;
 } {
   const validatedConfig = plainToClass(EnvironmentVariables, config, {
     enableImplicitConversion: true,
@@ -56,6 +62,9 @@ export function validate(config: Record<string, unknown>): {
       name: validatedConfig.APP_NAME,
       corsOrigin: validatedConfig.APP_CORS_ORIGIN,
       baseUrl: validatedConfig.APP_BASE_URL,
+    },
+    youtube: {
+      apiKey: validatedConfig.YOUTUBE_API_KEY,
     },
   };
 }

@@ -8,6 +8,7 @@ import Document, {
   Main,
   NextScript,
 } from 'next/document';
+import Script from 'next/script';
 import * as React from 'react';
 
 import { createEmotionCache } from '@app/lib/emotion/createEmotionCache';
@@ -36,6 +37,11 @@ export default class MyDocument extends Document {
           <link
             rel="stylesheet"
             href="https://fonts.googleapis.com/icon?family=Material+Icons"
+          />
+
+          <Script
+            src="https://www.youtube.com/iframe_api"
+            strategy="beforeInteractive"
           />
         </Head>
 

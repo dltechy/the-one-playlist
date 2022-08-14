@@ -1,9 +1,11 @@
 import { Box, Stack } from '@mui/material';
 import { FC, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
+import { getSpacingPx } from '@app/helpers/theme/spacing.helper';
 import { YouTube } from '@app/modules/youtube/components/YouTube';
 
 import { MediaController } from '../components/MediaController';
+import { Playlist } from '../components/Playlist';
 import { PlaylistLinkInput } from '../components/PlaylistLinkInput';
 import { PlayerContext, PlayerContextType } from '../contexts/player.context';
 import { playerReducer } from '../reducers/player.reducer';
@@ -15,6 +17,10 @@ export const Player: FC = () => {
 
   const PLAYER_MAX_WIDTH = 1280;
   const PLAYER_MAX_HEIGHT = 720;
+
+  const PLAYLIST_WIDTH = 400;
+
+  const DEFAULT_MARGIN = 4;
 
   const playerRef = useRef<HTMLElement>(null);
   const [playerWidth, setPlayerWidth] = useState(PLAYER_MAX_WIDTH);
@@ -157,9 +163,11 @@ export const Player: FC = () => {
       <Stack
         position="absolute"
         spacing={2}
-        margin={4}
+        margin={DEFAULT_MARGIN}
         alignItems="center"
-        sx={{ inset: 0 }}
+        sx={{
+          inset: `0 ${PLAYLIST_WIDTH + getSpacingPx(DEFAULT_MARGIN)}px 0 0`,
+        }}
       >
         <Box width="100%" maxWidth={PLAYER_MAX_WIDTH}>
           <PlaylistLinkInput />
@@ -173,6 +181,15 @@ export const Player: FC = () => {
           <MediaController />
         </Box>
       </Stack>
+
+      <Box
+        position="absolute"
+        width={PLAYLIST_WIDTH}
+        margin={DEFAULT_MARGIN}
+        sx={{ inset: '0 0 0 auto' }}
+      >
+        <Playlist />
+      </Box>
     </PlayerContext.Provider>
   );
 };

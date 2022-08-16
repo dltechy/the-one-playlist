@@ -1031,6 +1031,11 @@
     "@types/mime" "^1"
     "@types/node" "*"
 
+"@types/spotify-api@^0.0.17":
+  version "0.0.17"
+  resolved "https://registry.yarnpkg.com/@types/spotify-api/-/spotify-api-0.0.17.tgz#cdd3834508f171939340bdf813cc10af05cf4083"
+  integrity sha512-9CM+iRqR3EBF3pw2WTXKcKPghiEV4HYxIfRvdHstT6QRrcYOQMjLNvI0qCwab/w5RkupNxDgnGHvOrsalLCUWQ==
+
 "@types/stack-utils@^2.0.0":
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/@types/stack-utils/-/stack-utils-2.0.1.tgz#20f18294f797f2209b5f65c8e3b5c8e8261d127c"

@@ -4,4 +4,5 @@ export interface AppConfig {
   name?: string;
   corsOrigin?: string;
   baseUrl: string;
+  webBaseUrl: string;
 }

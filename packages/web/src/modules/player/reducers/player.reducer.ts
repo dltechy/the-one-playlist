@@ -229,6 +229,11 @@ export const playerReducer = (
           ...((action.payload?.mediaInfoList ?? {})[MediaService.YouTube] ??
             {}),
         },
+        [MediaService.Spotify]: {
+          ...state.mediaInfoList[MediaService.Spotify],
+          ...((action.payload?.mediaInfoList ?? {})[MediaService.Spotify] ??
+            {}),
+        },
       };
 
       return shufflePlaylist(

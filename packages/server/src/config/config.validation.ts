@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 
 import { AppConfig } from './app.config';
+import { SpotifyConfig } from './spotify.config';
 import { YouTubeConfig } from './youtube.config';
 
 export enum Environment {
@@ -40,12 +41,25 @@ class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty()
+  public APP_WEB_BASE_URL: string;
+
+  @IsString()
+  @IsNotEmpty()
   public YOUTUBE_API_KEY: string;
+
+  @IsString()
+  @IsNotEmpty()
+  public SPOTIFY_CLIENT_ID: string;
+
+  @IsString()
+  @IsNotEmpty()
+  public SPOTIFY_CLIENT_SECRET: string;
 }
 
 export function validate(config: Record<string, unknown>): {
   app: AppConfig;
   youtube: YouTubeConfig;
+  spotify: SpotifyConfig;
 } {
   const validatedConfig = plainToClass(EnvironmentVariables, config, {
     enableImplicitConversion: true,
@@ -62,9 +76,14 @@ export function validate(config: Record<string, unknown>): {
       name: validatedConfig.APP_NAME,
       corsOrigin: validatedConfig.APP_CORS_ORIGIN,
       baseUrl: validatedConfig.APP_BASE_URL,
+      webBaseUrl: validatedConfig.APP_WEB_BASE_URL,
     },
     youtube: {
       apiKey: validatedConfig.YOUTUBE_API_KEY,
+    },
+    spotify: {
+      clientId: validatedConfig.SPOTIFY_CLIENT_ID,
+      clientSecret: validatedConfig.SPOTIFY_CLIENT_SECRET,
     },
   };
 }

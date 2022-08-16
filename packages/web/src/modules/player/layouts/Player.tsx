@@ -2,6 +2,7 @@ import { Box, Stack } from '@mui/material';
 import { FC, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
 import { getSpacingPx } from '@app/helpers/theme/spacing.helper';
+import { Spotify } from '@app/modules/spotify/components/Spotify';
 import { YouTube } from '@app/modules/youtube/components/YouTube';
 
 import { MediaController } from '../components/MediaController';
@@ -148,13 +149,23 @@ export const Player: FC = () => {
     const mediaService = mediaId?.service ?? MediaService.None;
 
     return (
-      <Box
-        display={mediaService === MediaService.YouTube ? 'block' : 'none'}
-        width="100%"
-        height="100%"
-      >
-        <YouTube />
-      </Box>
+      <>
+        <Box
+          display={mediaService === MediaService.YouTube ? 'block' : 'none'}
+          width="100%"
+          height="100%"
+        >
+          <YouTube />
+        </Box>
+
+        <Box
+          display={mediaService === MediaService.Spotify ? 'block' : 'none'}
+          width="100%"
+          height="100%"
+        >
+          <Spotify />
+        </Box>
+      </>
     );
   };
 

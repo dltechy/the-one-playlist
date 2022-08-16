@@ -18,4 +18,5 @@ export type MediaInfoList = {
 export const createEmptyMediaInfoList = (): MediaInfoList => ({
   [MediaService.None]: {},
   [MediaService.YouTube]: {},
+  [MediaService.Spotify]: {},
 });

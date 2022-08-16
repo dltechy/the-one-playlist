@@ -44,6 +44,10 @@ export default class MyDocument extends Document {
             src="https://www.youtube.com/iframe_api"
             strategy="beforeInteractive"
           />
+          <Script
+            src="https://sdk.scdn.co/spotify-player.js"
+            strategy="beforeInteractive"
+          />
         </Head>
 
         <Box component="body" overflow="hidden">

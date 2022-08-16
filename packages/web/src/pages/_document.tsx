@@ -10,6 +10,7 @@ import Document, {
 } from 'next/document';
 import Script from 'next/script';
 import * as React from 'react';
+import { resetServerContext } from 'react-beautiful-dnd';
 
 import { createEmotionCache } from '@app/lib/emotion/createEmotionCache';
 import { theme } from '@app/styles/theme';
@@ -107,6 +108,8 @@ MyDocument.getInitialProps = async (ctx): Promise<DocumentInitialProps> => {
       dangerouslySetInnerHTML={{ __html: style.css }}
     />
   ));
+
+  resetServerContext();
 
   return {
     ...initialProps,

@@ -1,3 +1,4 @@
+import { DragHandle } from '@mui/icons-material';
 import {
   AppBar,
   Box,
@@ -11,13 +12,19 @@ import {
 } from '@mui/material';
 import { Property } from 'csstype';
 import { FC, useContext, useEffect, useRef, useState } from 'react';
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  DropResult,
+} from 'react-beautiful-dnd';
 import { v4 as uuidv4 } from 'uuid';
 
 import { getDurationString } from '@app/helpers/player/playerTime.helper';
 
 import { PlayerContext, PlayerContextType } from '../contexts/player.context';
 import { PlayerActionType } from '../reducers/player.reducer';
-import { MediaId } from '../types/mediaId';
+import { compareMediaIds, MediaId } from '../types/mediaId';
 import { MediaInfoList } from '../types/mediaInfoList';
 import { MediaService } from '../types/mediaService';
 
@@ -39,7 +46,11 @@ export const Playlist: FC = () => {
     }[]
   >([]);
 
-  const [hoverId, setHoverId] = useState('');
+  const [isEnabled, setIsEnabled] = useState(false);
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [itemHoverIndex, setItemHoverIndex] = useState(-1);
+  const [textHoverId, setTextHoverId] = useState('');
 
   const {
     playerState: { mediaIds, mediaInfoList, mediaIndex },
@@ -48,37 +59,81 @@ export const Playlist: FC = () => {
 
   // Effects
 
+  // Initialization
+  useEffect(() => {
+    // This is required to make react-beautiful-dnd work with react strict mode
+    const animation = requestAnimationFrame(() => setIsEnabled(true));
+
+    return () => {
+      cancelAnimationFrame(animation);
+      setIsEnabled(false);
+    };
+  }, []);
+
   // Set playlist item IDs
   useEffect(() => {
-    while (mediaIds.length > playlistItemIds.current.length) {
-      playlistItemIds.current.push({
-        itemId: uuidv4(),
-        titleElementId: uuidv4(),
-        authorsElementId: uuidv4(),
-      });
+    if (isEnabled) {
+      while (mediaIds.length > playlistItemIds.current.length) {
+        playlistItemIds.current.push({
+          itemId: uuidv4(),
+          titleElementId: uuidv4(),
+          authorsElementId: uuidv4(),
+        });
+      }
+      if (mediaIds.length < playlistItemIds.current.length) {
+        playlistItemIds.current.splice(mediaIds.length);
+      }
     }
-    if (mediaIds.length < playlistItemIds.current.length) {
-      playlistItemIds.current.splice(mediaIds.length);
-    }
-  }, [mediaIds]);
+  }, [isEnabled, mediaIds]);
 
   // Scroll to new media
   useEffect(() => {
-    const listHolder = document.getElementById(
-      PLAYLIST_HOLDER_ID,
-    ) as HTMLElement;
-    const list = listHolder.children[0] as HTMLElement;
-    const listItem = list.children[0] as HTMLElement;
+    if (isEnabled) {
+      const listHolder = document.getElementById(
+        PLAYLIST_HOLDER_ID,
+      ) as HTMLElement;
+      const list = listHolder.children[0] as HTMLElement;
+      const listItem = list.children[0] as HTMLElement;
 
-    if (listItem) {
-      const listItemRect = listItem.getBoundingClientRect();
-      const listItemHeight = listItemRect.height;
+      if (listItem) {
+        const listItemRect = listItem.getBoundingClientRect();
+        const listItemHeight = listItemRect.height;
 
-      const centerY = (mediaIndex - 2) * listItemHeight;
+        const centerY = (mediaIndex - 2) * listItemHeight;
 
-      listHolder.scrollTo(0, centerY);
+        listHolder.scrollTo(0, centerY);
+      }
     }
-  }, [mediaIds, mediaIndex]);
+  }, [isEnabled, mediaIndex]);
+
+  // Handlers
+
+  const handlePlaylistDragEnd = (event: DropResult): void => {
+    const srcIndex = event.source?.index ?? 0;
+    const dstIndex = event.destination?.index ?? srcIndex;
+
+    const newMediaIds = [...mediaIds];
+
+    const draggedElement = newMediaIds.splice(srcIndex, 1)[0];
+    newMediaIds.splice(dstIndex, 0, draggedElement);
+
+    const draggedItemIds = playlistItemIds.current.splice(srcIndex, 1)[0];
+    playlistItemIds.current.splice(dstIndex, 0, draggedItemIds);
+
+    const newMediaIndex = newMediaIds.findIndex((id) =>
+      compareMediaIds(id, mediaIds[mediaIndex]),
+    );
+
+    playerDispatch({
+      type: PlayerActionType.UpdateMediaIds,
+      payload: {
+        mediaIds: newMediaIds,
+        mediaIndex: newMediaIndex,
+      },
+    });
+
+    setIsDragging(false);
+  };
 
   // Element
 
@@ -176,122 +231,185 @@ export const Playlist: FC = () => {
         borderColor="divider"
         overflow="auto"
       >
-        <List disablePadding>
-          {mediaIds.map((mediaId, index) => {
-            const mediaInfo = mediaInfoList[mediaId.service][mediaId.id];
-
-            return (
-              <ListItem
-                key={playlistItemIds.current[index]?.itemId ?? uuidv4()}
-                disablePadding
-                divider
-              >
-                <ListItemButton
-                  selected={index === mediaIndex}
-                  onClick={(): void =>
-                    playerDispatch({
-                      type: PlayerActionType.PlayMediaAt,
-                      payload: {
-                        mediaIndex: index,
-                      },
-                    })
-                  }
-                  disableGutters
+        <DragDropContext
+          onDragStart={(): void => setIsDragging(true)}
+          onDragEnd={handlePlaylistDragEnd}
+        >
+          {isEnabled ? (
+            <Droppable droppableId="playlist-droppable">
+              {(droppableProvided): JSX.Element => (
+                <List
+                  disablePadding
+                  ref={droppableProvided.innerRef}
+                  {...droppableProvided.droppableProps}
                 >
-                  <Stack paddingX={1}>
-                    <Box>
-                      <Typography
-                        variant="body2"
-                        component="p"
-                        color="text.secondary"
+                  {mediaIds.map((mediaId, index) => {
+                    const mediaInfo =
+                      mediaInfoList[mediaId.service][mediaId.id];
+
+                    return (
+                      <ListItem
+                        key={playlistItemIds.current[index]?.itemId ?? uuidv4()}
+                        disablePadding
+                        divider
                       >
-                        {mediaId.service}
-                      </Typography>
-                    </Box>
-
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          component="p"
-                          width={MEDIA_NUMBER_WIDTH}
-                          textAlign="center"
-                          color="text.secondary"
-                        >
-                          {index + 1}
-                        </Typography>
-                      </Box>
-
-                      {renderThumbnail(mediaId, mediaInfo)}
-
-                      <Stack width="100%" justifyContent="center">
-                        <Tooltip
-                          title={mediaInfo?.title ?? INVALID_MEDIA_TEXT}
-                          open={
-                            hoverId ===
-                              playlistItemIds.current[index]?.titleElementId ??
-                            uuidv4()
+                        <Draggable
+                          draggableId={
+                            playlistItemIds.current[index]?.itemId ?? uuidv4()
                           }
+                          index={index}
+                          disableInteractiveElementBlocking
                         >
-                          <Typography
-                            variant="body1"
-                            component="span"
-                            display="-webkit-box"
-                            height="3rem"
-                            marginBottom={1}
-                            overflow="hidden"
-                            sx={{
-                              WebkitBoxOrient: 'vertical',
-                              WebkitLineClamp: 2,
-                            }}
-                            onMouseEnter={(): void =>
-                              setHoverId(
-                                playlistItemIds.current[index]
-                                  ?.titleElementId ?? uuidv4(),
-                              )
-                            }
-                            onMouseLeave={(): void => setHoverId('')}
-                          >
-                            {mediaInfo?.title ?? INVALID_MEDIA_TEXT}
-                          </Typography>
-                        </Tooltip>
-                        <Tooltip
-                          title={mediaInfo?.authors ?? INVALID_MEDIA_TEXT}
-                          open={
-                            hoverId ===
-                              playlistItemIds.current[index]
-                                ?.authorsElementId ?? uuidv4()
-                          }
-                        >
-                          <Typography
-                            variant="body2"
-                            component="p"
-                            display="-webkit-box"
-                            overflow="hidden"
-                            color="text.secondary"
-                            sx={{
-                              WebkitBoxOrient: 'vertical',
-                              WebkitLineClamp: 1,
-                            }}
-                            onMouseEnter={(): void =>
-                              setHoverId(
-                                playlistItemIds.current[index]
-                                  ?.authorsElementId ?? uuidv4(),
-                              )
-                            }
-                            onMouseLeave={(): void => setHoverId('')}
-                          >
-                            {mediaInfo?.authors ?? INVALID_MEDIA_TEXT}
-                          </Typography>
-                        </Tooltip>
-                      </Stack>
-                    </Stack>
-                  </Stack>
-                </ListItemButton>
-              </ListItem>
-            );
-          })}
-        </List>
+                          {(
+                            draggableProvided,
+                            draggableSnapshot,
+                          ): JSX.Element => (
+                            <ListItemButton
+                              selected={index === mediaIndex}
+                              onClick={(): void =>
+                                playerDispatch({
+                                  type: PlayerActionType.PlayMediaAt,
+                                  payload: {
+                                    mediaIndex: index,
+                                  },
+                                })
+                              }
+                              disableGutters
+                              disableRipple
+                              onMouseEnter={(): void =>
+                                setItemHoverIndex(index)
+                              }
+                              onMouseLeave={(): void => setItemHoverIndex(-1)}
+                              ref={draggableProvided.innerRef}
+                              {...draggableProvided.draggableProps}
+                              {...draggableProvided.dragHandleProps}
+                            >
+                              <Stack paddingX={1}>
+                                <Box>
+                                  <Typography
+                                    variant="body2"
+                                    component="p"
+                                    color="text.secondary"
+                                  >
+                                    {mediaId.service}
+                                  </Typography>
+                                </Box>
+
+                                <Stack
+                                  direction="row"
+                                  spacing={1}
+                                  alignItems="center"
+                                >
+                                  <Box>
+                                    {!draggableSnapshot.isDragging &&
+                                    (isDragging || itemHoverIndex !== index) ? (
+                                      <Typography
+                                        variant="body2"
+                                        component="p"
+                                        width={MEDIA_NUMBER_WIDTH}
+                                        textAlign="center"
+                                        color="text.secondary"
+                                      >
+                                        {index + 1}
+                                      </Typography>
+                                    ) : (
+                                      <Box
+                                        width={MEDIA_NUMBER_WIDTH}
+                                        lineHeight={0}
+                                        textAlign="center"
+                                        color="text.secondary"
+                                      >
+                                        <DragHandle />
+                                      </Box>
+                                    )}
+                                  </Box>
+
+                                  {renderThumbnail(mediaId, mediaInfo)}
+
+                                  <Stack width="100%" justifyContent="center">
+                                    <Tooltip
+                                      title={
+                                        mediaInfo?.title ?? INVALID_MEDIA_TEXT
+                                      }
+                                      open={
+                                        textHoverId ===
+                                          playlistItemIds.current[index]
+                                            ?.titleElementId ?? uuidv4()
+                                      }
+                                    >
+                                      <Typography
+                                        variant="body1"
+                                        component="span"
+                                        display="-webkit-box"
+                                        height="3rem"
+                                        marginBottom={1}
+                                        overflow="hidden"
+                                        sx={{
+                                          WebkitBoxOrient: 'vertical',
+                                          WebkitLineClamp: 2,
+                                        }}
+                                        onMouseEnter={(): void =>
+                                          setTextHoverId(
+                                            playlistItemIds.current[index]
+                                              ?.titleElementId ?? uuidv4(),
+                                          )
+                                        }
+                                        onMouseLeave={(): void =>
+                                          setTextHoverId('')
+                                        }
+                                      >
+                                        {mediaInfo?.title ?? INVALID_MEDIA_TEXT}
+                                      </Typography>
+                                    </Tooltip>
+                                    <Tooltip
+                                      title={
+                                        mediaInfo?.authors ?? INVALID_MEDIA_TEXT
+                                      }
+                                      open={
+                                        textHoverId ===
+                                          playlistItemIds.current[index]
+                                            ?.authorsElementId ?? uuidv4()
+                                      }
+                                    >
+                                      <Typography
+                                        variant="body2"
+                                        component="p"
+                                        display="-webkit-box"
+                                        overflow="hidden"
+                                        color="text.secondary"
+                                        sx={{
+                                          WebkitBoxOrient: 'vertical',
+                                          WebkitLineClamp: 1,
+                                        }}
+                                        onMouseEnter={(): void =>
+                                          setTextHoverId(
+                                            playlistItemIds.current[index]
+                                              ?.authorsElementId ?? uuidv4(),
+                                          )
+                                        }
+                                        onMouseLeave={(): void =>
+                                          setTextHoverId('')
+                                        }
+                                      >
+                                        {mediaInfo?.authors ??
+                                          INVALID_MEDIA_TEXT}
+                                      </Typography>
+                                    </Tooltip>
+                                  </Stack>
+                                </Stack>
+                              </Stack>
+                            </ListItemButton>
+                          )}
+                        </Draggable>
+                      </ListItem>
+                    );
+                  })}
+                  {droppableProvided.placeholder}
+                </List>
+              )}
+            </Droppable>
+          ) : null}
+        </DragDropContext>
       </Box>
     </Stack>
   );

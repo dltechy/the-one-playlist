@@ -24,6 +24,7 @@
     "dotenv-cli": "^6.0.0",
     "next": "^12.2.5",
     "react": "18.2.0",
+    "react-beautiful-dnd": "^13.1.0",
     "react-dom": "18.2.0",
     "uuid": "^8.3.2"
   },
@@ -32,6 +33,7 @@
     "@emotion/eslint-plugin": "^11.7.0",
     "@types/node": "18.6.2",
     "@types/react": "18.0.15",
+    "@types/react-beautiful-dnd": "^13.1.2",
     "@types/react-dom": "18.0.6",
     "@types/uuid": "^8.3.4",
     "@types/youtube": "^0.0.47",

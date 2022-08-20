@@ -8,7 +8,16 @@ import {
   TextField,
 } from '@mui/material';
 import cookie from 'cookie';
-import { FC, FormEvent, useContext, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
+import {
+  FC,
+  FormEvent,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   getSpotifyPlaylistTrackDetails,
@@ -30,6 +39,9 @@ import { MediaService } from '../types/mediaService';
 export const PlaylistLinkInput: FC = () => {
   // Properties
 
+  const router = useRouter();
+  const prevIsRouterReady = useRef(false);
+
   const inputRef = useRef<HTMLElement>(null);
 
   const [playlistLink, setPlaylistLink] = useState('');
@@ -46,44 +58,64 @@ export const PlaylistLinkInput: FC = () => {
 
   // General methods
 
-  const loadYouTube = async (playlistId: string): Promise<void> => {
-    const videoIds = await loadYouTubePlaylist(playlistId);
-    const videos = await getYouTubeVideoDetails(videoIds);
+  const getQueryPlaylistIds = useCallback((): string[] => {
+    const { query } = router;
+    let playlistIds: string[];
+    if (query.playlistIds != null) {
+      playlistIds = Array.isArray(query.playlistIds)
+        ? query.playlistIds
+        : [query.playlistIds];
+    } else {
+      playlistIds = [];
+    }
 
-    playerDispatch({
-      type: PlayerActionType.AddMediaList,
-      payload: {
-        originalMediaIds: videoIds.map((id) => ({
-          service: MediaService.YouTube,
-          id,
-        })),
-        mediaInfoList: {
-          ...createEmptyMediaInfoList(),
-          [MediaService.YouTube]: videos,
+    return playlistIds;
+  }, [router]);
+
+  const loadYouTube = useCallback(
+    async (playlistId: string): Promise<void> => {
+      const videoIds = await loadYouTubePlaylist(playlistId);
+      const videos = await getYouTubeVideoDetails(videoIds);
+
+      playerDispatch({
+        type: PlayerActionType.AddMediaList,
+        payload: {
+          originalMediaIds: videoIds.map((id) => ({
+            service: MediaService.YouTube,
+            id,
+          })),
+          mediaInfoList: {
+            ...createEmptyMediaInfoList(),
+            [MediaService.YouTube]: videos,
+          },
         },
-      },
-    });
-  };
+      });
+    },
+    [playerDispatch],
+  );
 
-  const loadSpotify = async (playlistId: string): Promise<void> => {
-    const { trackIds, tracks } = await getSpotifyPlaylistTrackDetails(
-      playlistId,
-    );
+  const loadSpotify = useCallback(
+    async (playlistId: string): Promise<void> => {
+      const { trackIds, tracks } = await getSpotifyPlaylistTrackDetails(
+        playlistId,
+      );
 
-    playerDispatch({
-      type: PlayerActionType.AddMediaList,
-      payload: {
-        originalMediaIds: trackIds.map((id) => ({
-          service: MediaService.Spotify,
-          id,
-        })),
-        mediaInfoList: {
-          ...createEmptyMediaInfoList(),
-          [MediaService.Spotify]: tracks,
+      playerDispatch({
+        type: PlayerActionType.AddMediaList,
+        payload: {
+          originalMediaIds: trackIds.map((id) => ({
+            service: MediaService.Spotify,
+            id,
+          })),
+          mediaInfoList: {
+            ...createEmptyMediaInfoList(),
+            [MediaService.Spotify]: tracks,
+          },
         },
-      },
-    });
-  };
+      });
+    },
+    [playerDispatch],
+  );
 
   // Effects
 
@@ -109,6 +141,56 @@ export const PlaylistLinkInput: FC = () => {
     }
   }, [tick]);
 
+  // Load playlists from query
+  useEffect(() => {
+    if (!prevIsRouterReady.current && router.isReady) {
+      const loadPlaylists = async (): Promise<void> => {
+        const playlistIds = getQueryPlaylistIds();
+        if (playlistIds != null) {
+          setIsLoadingMedia(true);
+
+          const loadedPlaylistIds: string[] = [];
+
+          for (let i = 0; i < playlistIds.length; i += 1) {
+            try {
+              const playlistId = playlistIds[i];
+              const [service, id] = playlistId.split(' ');
+
+              if (service != null && id != null) {
+                /* eslint-disable no-await-in-loop */
+                switch (service) {
+                  case MediaService.YouTube: {
+                    await loadYouTube(id);
+                    break;
+                  }
+                  case MediaService.Spotify: {
+                    await loadSpotify(id);
+                    break;
+                  }
+                  default: {
+                    break;
+                  }
+                }
+                /* eslint-enable no-await-in-loop */
+              }
+
+              loadedPlaylistIds.push(playlistId);
+            } catch {
+              // Do nothing
+            }
+          }
+        }
+      };
+      loadPlaylists()
+        .catch()
+        .finally(() => {
+          setIsLoadingMedia(false);
+        });
+
+      prevIsRouterReady.current = router.isReady;
+    }
+  }, [router, getQueryPlaylistIds, loadYouTube, loadSpotify]);
+
   // Handlers
 
   const handleLoadPlaylistClick = (event: FormEvent<HTMLFormElement>): void => {
@@ -130,6 +212,15 @@ export const PlaylistLinkInput: FC = () => {
           const playlistId = match[1];
           await loadYouTube(playlistId);
 
+          router.replace({
+            query: {
+              ...router.query,
+              playlistIds: [
+                ...getQueryPlaylistIds(),
+                `${MediaService.YouTube} ${playlistId}`,
+              ],
+            },
+          });
           hasMatch = true;
         }
       }
@@ -143,6 +234,15 @@ export const PlaylistLinkInput: FC = () => {
             const playlistId = match[1];
             await loadSpotify(playlistId);
 
+            router.replace({
+              query: {
+                ...router.query,
+                playlistIds: [
+                  ...getQueryPlaylistIds(),
+                  `${MediaService.Spotify} ${playlistId}`,
+                ],
+              },
+            });
             hasMatch = true;
           }
         }

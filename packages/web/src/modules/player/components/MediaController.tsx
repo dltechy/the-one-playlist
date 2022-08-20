@@ -20,7 +20,15 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { FC, SyntheticEvent, useContext, useState } from 'react';
+import { useRouter } from 'next/router';
+import {
+  FC,
+  SyntheticEvent,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   getDurationString,
@@ -34,6 +42,9 @@ export const MediaController: FC = () => {
   // Properties
 
   const PLAYER_MAX_WIDTH = 1280;
+
+  const router = useRouter();
+  const prevIsRouterReady = useRef(false);
 
   const {
     playerState: {
@@ -56,7 +67,48 @@ export const MediaController: FC = () => {
   const [isMouseOverSeekSlider, setIsMouseOverSeekSlider] = useState(false);
   const [isMouseOverVolumeSlider, setIsMouseOverVolumeSlider] = useState(false);
 
+  // Effects
+
+  // Set shuffle & repeat state from query
+  useEffect(() => {
+    if (!prevIsRouterReady.current && router.isReady) {
+      const { query } = router;
+
+      if (query.shuffle === 'false') {
+        playerDispatch({ type: PlayerActionType.ShuffleOff });
+      }
+
+      if (query.repeat === 'false') {
+        playerDispatch({ type: PlayerActionType.RepeatOff });
+      }
+
+      prevIsRouterReady.current = router.isReady;
+    }
+  }, [router, playerDispatch]);
+
   // Handlers
+
+  const handleToggleShuffleClick = (): void => {
+    const { shuffle, ...query } = router.query;
+    if (isShuffleOn) {
+      query.shuffle = 'false';
+    }
+
+    router.replace({ query });
+
+    playerDispatch({ type: PlayerActionType.ToggleShuffle });
+  };
+
+  const handleToggleRepeatClick = (): void => {
+    const { repeat, ...query } = router.query;
+    if (isRepeatOn) {
+      query.repeat = 'false';
+    }
+
+    router.replace({ query });
+
+    playerDispatch({ type: PlayerActionType.ToggleRepeat });
+  };
 
   const handleSeek = (
     event: Event,
@@ -202,9 +254,7 @@ export const MediaController: FC = () => {
               icon={<Shuffle />}
               checkedIcon={<ShuffleOn />}
               checked={isShuffleOn}
-              onChange={(): void =>
-                playerDispatch({ type: PlayerActionType.ToggleShuffle })
-              }
+              onChange={handleToggleShuffleClick}
             />
           </Box>
 
@@ -243,9 +293,7 @@ export const MediaController: FC = () => {
               icon={<Repeat />}
               checkedIcon={<RepeatOn />}
               checked={isRepeatOn}
-              onChange={(): void =>
-                playerDispatch({ type: PlayerActionType.ToggleRepeat })
-              }
+              onChange={handleToggleRepeatClick}
             />
           </Box>
         </Stack>

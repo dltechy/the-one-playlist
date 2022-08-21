@@ -85,6 +85,14 @@ describe('SpotifyController (routes)', () => {
     expect(spotifyServiceMock.logout).toHaveBeenCalled();
   });
 
+  it('should connect to "GET /spotify/playlists/:id"', async () => {
+    await request(app.getHttpServer()).get(
+      `/spotify/playlists/${spotifySample1.playlistId}`,
+    );
+
+    expect(spotifyServiceMock.getPlaylist).toHaveBeenCalled();
+  });
+
   it('should connect to "GET /spotify/playlists/:id/tracks"', async () => {
     spotifyServiceMock.getPlaylistTracks.mockResolvedValue(
       spotifySample1.tracks,

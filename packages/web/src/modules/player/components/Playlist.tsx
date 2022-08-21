@@ -1,7 +1,8 @@
-import { DragHandle } from '@mui/icons-material';
+import { DragHandle, Edit } from '@mui/icons-material';
 import {
   AppBar,
   Box,
+  IconButton,
   List,
   ListItem,
   ListItemButton,
@@ -216,11 +217,19 @@ export const Playlist: FC = () => {
     <Stack height="100%">
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6" component="div">
+          <Typography variant="h6" component="div" flexGrow={1}>
             {`Playing: ${Math.min(mediaIndex + 1, mediaIds.length)} / ${
               mediaIds.length
             }`}
           </Typography>
+          <IconButton
+            aria-label="Edit playlist"
+            onClick={(): void =>
+              playerDispatch({ type: PlayerActionType.OpenPlaylistManager })
+            }
+          >
+            <Edit />
+          </IconButton>
         </Toolbar>
       </AppBar>
 

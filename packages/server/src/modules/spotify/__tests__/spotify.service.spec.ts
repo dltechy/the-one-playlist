@@ -506,6 +506,132 @@ describe('SpotifyService', () => {
     });
   });
 
+  describe('getPlaylist', () => {
+    it('should return playlist', async () => {
+      reqMock.cookies = {
+        spotifyAccessToken: spotifySample1.tokens.accessToken,
+        spotifyRefreshToken: spotifySample1.tokens.refreshToken,
+      };
+      axiosMock.get.mockResolvedValue(spotifySample1.playlistResponse);
+
+      const playlist = await service.getPlaylist({
+        playlistId: spotifySample1.playlistId,
+        req: reqMock as {} as Request,
+        res: resMock as {} as Response,
+      });
+
+      expect(playlist).toEqual(spotifySample1.playlist);
+    });
+
+    it('should return playlist whose thumbnail has size of 0', async () => {
+      reqMock.cookies = {
+        spotifyAccessToken: spotifySample3.tokens.accessToken,
+        spotifyRefreshToken: spotifySample3.tokens.refreshToken,
+      };
+      axiosMock.get.mockResolvedValue(spotifySample3.playlistResponse);
+
+      const playlist = await service.getPlaylist({
+        playlistId: spotifySample3.playlistId,
+        req: reqMock as {} as Request,
+        res: resMock as {} as Response,
+      });
+
+      expect(playlist).toEqual(spotifySample3.playlist);
+    });
+
+    it('should refresh tokens if access token is missing', async () => {
+      reqMock.cookies = {
+        spotifyRefreshToken: spotifySample1.tokens.refreshToken,
+      };
+      axiosMock.post.mockResolvedValue({
+        status: 200,
+        data: spotifySample2.spotifyTokens,
+      });
+      axiosMock.get.mockResolvedValue(spotifySample1.playlistResponse);
+
+      await service.getPlaylist({
+        playlistId: spotifySample1.playlistId,
+        req: reqMock as {} as Request,
+        res: resMock as {} as Response,
+      });
+
+      expect(axiosMock.get).toHaveBeenCalledWith(expect.any(String), {
+        headers: {
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          Authorization: `Bearer ${spotifySample2.tokens.accessToken}`,
+        },
+      });
+    });
+
+    it('should not refresh tokens if access token exists', async () => {
+      reqMock.cookies = {
+        spotifyAccessToken: spotifySample1.tokens.accessToken,
+        spotifyRefreshToken: spotifySample1.tokens.refreshToken,
+      };
+      axiosMock.post.mockResolvedValue({
+        status: 200,
+        data: spotifySample2.spotifyTokens,
+      });
+      axiosMock.get.mockResolvedValue(spotifySample1.playlistResponse);
+
+      await service.getPlaylist({
+        playlistId: spotifySample1.playlistId,
+        req: reqMock as {} as Request,
+        res: resMock as {} as Response,
+      });
+
+      expect(axiosMock.get).toHaveBeenCalledWith(expect.any(String), {
+        headers: {
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          Authorization: `Bearer ${spotifySample1.tokens.accessToken}`,
+        },
+      });
+    });
+
+    it('should throw error if cannot refresh token', async () => {
+      await expect(
+        service.getPlaylist({
+          playlistId: spotifySample1.playlistId,
+          req: reqMock as {} as Request,
+          res: resMock as {} as Response,
+        }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('should return axios error', async () => {
+      reqMock.cookies = {
+        spotifyAccessToken: spotifySample1.tokens.accessToken,
+        spotifyRefreshToken: spotifySample1.tokens.refreshToken,
+      };
+      axiosMock.get.mockRejectedValue(axiosSamples.error);
+
+      await expect(
+        service.getPlaylist({
+          playlistId: spotifySample1.playlistId,
+          req: reqMock as {} as Request,
+          res: resMock as {} as Response,
+        }),
+      ).rejects.toBeInstanceOf(HttpException);
+    });
+
+    createRethrowUnknownErrorAsyncTest({
+      beforeEach: () => {
+        reqMock.cookies = {
+          spotifyAccessToken: spotifySample1.tokens.accessToken,
+          spotifyRefreshToken: spotifySample1.tokens.refreshToken,
+        };
+      },
+      mockedObjectGetter: () => axiosMock,
+      mockedMethod: 'get',
+      testedPromiseGetter: () =>
+        service.getPlaylist({
+          playlistId: spotifySample1.playlistId,
+          req: reqMock as {} as Request,
+          res: resMock as {} as Response,
+        }),
+    });
+  });
+
   describe('getPlaylistTracks', () => {
     it('should return tracks', async () => {
       reqMock.cookies = {

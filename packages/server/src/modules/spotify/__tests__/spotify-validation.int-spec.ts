@@ -83,6 +83,27 @@ describe('SpotifyController (validation)', () => {
     });
   });
 
+  describe('getPlaylist', () => {
+    const requiredParams = {
+      id: spotifySample1.playlistId,
+    };
+
+    createParamsValidationTests({
+      appGetter: () => app,
+      requiredParams,
+      httpMethod: HttpMethod.Get,
+      path: '/spotify/playlists/:id',
+      expectedSuccessStatusCode: 200,
+      propertyTestValues: [
+        {
+          property: 'id',
+          successValues: ['string'],
+          failValues: [],
+        },
+      ],
+    });
+  });
+
   describe('getPlaylistTracks', () => {
     const requiredParams = {
       id: spotifySample1.playlistId,

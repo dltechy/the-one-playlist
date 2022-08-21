@@ -4,6 +4,7 @@ import cookie from 'cookie';
 import { sleep } from '@app/helpers/timeout/sleep.helper';
 import { MediaInfoList } from '@app/modules/player/types/mediaInfoList';
 import { MediaService } from '@app/modules/player/types/mediaService';
+import { PlaylistInfo } from '@app/modules/player/types/playlistInfo';
 
 export const spotifyLogin = async (): Promise<void> => {
   const url = `${process.env.NEXT_PUBLIC_APP_SERVER_BASE_URL}/spotify/auth/login`;
@@ -30,6 +31,27 @@ export const spotifyLogout = async (): Promise<void> => {
   await axios.post(url, undefined, {
     withCredentials: true,
   });
+};
+
+export const getSpotifyPlaylistDetails = async (
+  playlistId: string,
+): Promise<PlaylistInfo> => {
+  const url = `${process.env.NEXT_PUBLIC_APP_SERVER_BASE_URL}/spotify/playlists/${playlistId}`;
+
+  const {
+    data: playlist,
+  }: { data: Omit<PlaylistInfo, 'service' | 'mediaIds'> } = await axios.get(
+    url,
+    {
+      withCredentials: true,
+    },
+  );
+
+  return {
+    ...playlist,
+    service: MediaService.Spotify,
+    mediaIds: [],
+  };
 };
 
 export const getSpotifyPlaylistTrackDetails = async (

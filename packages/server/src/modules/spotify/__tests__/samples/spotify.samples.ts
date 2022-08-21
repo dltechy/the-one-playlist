@@ -1,15 +1,18 @@
 import { MediaInfoList } from '@app/types/media-info-list';
+import { PlaylistInfo } from '@app/types/playlist-info';
 
 import {
   SAMPLE_ACCESS_TOKEN,
-  SAMPLE_AUTHORS,
   SAMPLE_CODE,
   SAMPLE_DEVICE_ID,
   SAMPLE_PLAYLIST_ID,
+  SAMPLE_PLAYLIST_THUMBNAIL_URL,
+  SAMPLE_PLAYLIST_TITLE,
   SAMPLE_REFRESH_TOKEN,
-  SAMPLE_THUMBNAIL_URL,
-  SAMPLE_TITLE,
+  SAMPLE_TRACK_AUTHORS,
   SAMPLE_TRACK_ID,
+  SAMPLE_TRACK_THUMBNAIL_URL,
+  SAMPLE_TRACK_TITLE,
 } from '../constants/spotify.constants';
 
 function createSampleTokens(id: number): {
@@ -40,6 +43,30 @@ function createSampleSpotifyTokens(id: number): {
   };
 }
 
+function createSamplePlaylist({
+  id,
+  thumbnail,
+  itemCount,
+}: {
+  id: number;
+  thumbnail: {
+    width: number;
+    height: number;
+  };
+  itemCount: number;
+}): PlaylistInfo {
+  return {
+    id: `${SAMPLE_PLAYLIST_ID}${id}`,
+    title: `${SAMPLE_PLAYLIST_TITLE}${id}`,
+    thumbnail: {
+      url: `${SAMPLE_PLAYLIST_THUMBNAIL_URL}${id}`,
+      width: thumbnail.width,
+      height: thumbnail.height,
+    },
+    itemCount,
+  };
+}
+
 function createSampleTracks({
   id,
   thumbnail,
@@ -59,16 +86,38 @@ function createSampleTracks({
     trackIds: [`${SAMPLE_TRACK_ID}${id}`],
     tracks: {
       [`${SAMPLE_TRACK_ID}${id}`]: {
-        title: `${SAMPLE_TITLE}${id}`,
-        authors: `${SAMPLE_AUTHORS}${id}`,
+        title: `${SAMPLE_TRACK_TITLE}${id}`,
+        authors: `${SAMPLE_TRACK_AUTHORS}${id}`,
         thumbnail: {
-          url: `${SAMPLE_THUMBNAIL_URL}${id}`,
+          url: `${SAMPLE_TRACK_THUMBNAIL_URL}${id}`,
           width: thumbnail.width,
           height: thumbnail.height,
         },
         duration,
       },
     },
+  };
+}
+
+function createSamplePlaylistResponse(playlist: PlaylistInfo): {
+  data: SpotifyApi.SinglePlaylistResponse;
+} {
+  const { title, thumbnail, itemCount } = playlist;
+
+  return {
+    data: {
+      name: title,
+      images: [
+        {
+          url: thumbnail.url,
+          width: thumbnail.width !== 0 ? thumbnail.width : undefined,
+          height: thumbnail.height !== 0 ? thumbnail.height : undefined,
+        },
+      ],
+      tracks: {
+        total: itemCount,
+      } as SpotifyApi.PagingObject<SpotifyApi.PlaylistTrackObject>,
+    } as SpotifyApi.SinglePlaylistResponse,
   };
 }
 
@@ -110,11 +159,18 @@ function createSamplePlaylistTracksResponse(tracks: MediaInfoList): {
 
 function createSamples({
   id,
-  thumbnail,
+  playlistThumbnail,
+  itemCount,
+  trackThumbnail,
   duration,
 }: {
   id: number;
-  thumbnail: {
+  playlistThumbnail: {
+    width: number;
+    height: number;
+  };
+  itemCount: number;
+  trackThumbnail: {
     width: number;
     height: number;
   };
@@ -134,23 +190,31 @@ function createSamples({
     /* eslint-enable @typescript-eslint/naming-convention */
   };
   playlistId: string;
+  playlist: PlaylistInfo;
   deviceId: string;
   tracks: {
     trackIds: string[];
     tracks: MediaInfoList;
   };
+  playlistResponse: { data: SpotifyApi.SinglePlaylistResponse };
   playlistTracksResponse: { data: SpotifyApi.PlaylistTrackResponse };
 } {
   const code = `${SAMPLE_CODE}${id}`;
   const tokens = createSampleTokens(id);
   const spotifyTokens = createSampleSpotifyTokens(id);
   const playlistId = `${SAMPLE_PLAYLIST_ID}${id}`;
+  const playlist = createSamplePlaylist({
+    id,
+    thumbnail: playlistThumbnail,
+    itemCount,
+  });
   const deviceId = `${SAMPLE_DEVICE_ID}${id}`;
   const tracks = createSampleTracks({
     id,
-    thumbnail,
+    thumbnail: trackThumbnail,
     duration,
   });
+  const playlistResponse = createSamplePlaylistResponse(playlist);
   const playlistTracksResponse = createSamplePlaylistTracksResponse(
     tracks.tracks,
   );
@@ -160,8 +224,10 @@ function createSamples({
     tokens,
     spotifyTokens,
     playlistId,
+    playlist,
     deviceId,
     tracks,
+    playlistResponse,
     playlistTracksResponse,
   };
 }
@@ -169,7 +235,12 @@ function createSamples({
 export const spotifySamples = [
   createSamples({
     id: 1,
-    thumbnail: {
+    playlistThumbnail: {
+      width: 1280,
+      height: 720,
+    },
+    itemCount: 1,
+    trackThumbnail: {
       width: 1280,
       height: 720,
     },
@@ -177,7 +248,12 @@ export const spotifySamples = [
   }),
   createSamples({
     id: 2,
-    thumbnail: {
+    playlistThumbnail: {
+      width: 1280,
+      height: 720,
+    },
+    itemCount: 1,
+    trackThumbnail: {
       width: 1280,
       height: 720,
     },
@@ -185,7 +261,12 @@ export const spotifySamples = [
   }),
   createSamples({
     id: 3,
-    thumbnail: {
+    playlistThumbnail: {
+      width: 0,
+      height: 0,
+    },
+    itemCount: 1,
+    trackThumbnail: {
       width: 0,
       height: 0,
     },

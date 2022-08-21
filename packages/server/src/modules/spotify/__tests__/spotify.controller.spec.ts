@@ -99,6 +99,22 @@ describe('SpotifyController', () => {
     });
   });
 
+  describe('getPlaylist', () => {
+    it('should return playlist', async () => {
+      spotifyServiceMock.getPlaylist.mockResolvedValue(spotifySample1.playlist);
+
+      const playlist = await controller.getPlaylist(
+        {
+          id: spotifySample1.playlistId,
+        },
+        reqMock as {} as Request,
+        resMock as {} as Response,
+      );
+
+      expect(playlist).toEqual(spotifySample1.playlist);
+    });
+  });
+
   describe('getPlaylistTracks', () => {
     it('should return tracks', async () => {
       spotifyServiceMock.getPlaylistTracks.mockResolvedValue(

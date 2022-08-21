@@ -1,10 +1,16 @@
-import { HttpException, Inject, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AxiosError } from 'axios';
 
 import { YouTubeConfig } from '@app/config/youtube.config';
 import { axiosSymbol, AxiosType } from '@app/helpers/imports/imports.helper';
 import { MediaInfoList } from '@app/types/media-info-list';
+import { PlaylistInfo } from '@app/types/playlist-info';
 
 @Injectable()
 export class YouTubeService {
@@ -12,6 +18,46 @@ export class YouTubeService {
     private readonly configService: ConfigService,
     @Inject(axiosSymbol) private readonly axios: AxiosType,
   ) {}
+
+  public async getPlaylist(playlistId: string): Promise<PlaylistInfo> {
+    const url = 'https://youtube.googleapis.com/youtube/v3/playlists';
+
+    const { apiKey } = this.configService.get<YouTubeConfig>('youtube');
+
+    const query = `part=snippet%2CcontentDetails&id=${playlistId}&key=${apiKey}`;
+
+    try {
+      const {
+        data,
+      }: { data: GoogleAppsScript.YouTube.Schema.PlaylistListResponse } =
+        await this.axios.get(`${url}?${query}`);
+
+      if (data.items.length === 0) {
+        throw new NotFoundException('Playlist not found');
+      }
+
+      const { id, snippet, contentDetails } = data.items[0];
+
+      const playlist: PlaylistInfo = {
+        id,
+        title: snippet.title,
+        thumbnail: {
+          url: snippet.thumbnails.default.url,
+          width: snippet.thumbnails.default.width,
+          height: snippet.thumbnails.default.height,
+        },
+        itemCount: contentDetails.itemCount,
+      };
+
+      return playlist;
+    } catch (e) {
+      if (e instanceof AxiosError && e.response) {
+        throw new HttpException(e.response.data, e.response.status);
+      }
+
+      throw e;
+    }
+  }
 
   public async getVideos(videoIds: string[]): Promise<MediaInfoList> {
     const url = 'https://youtube.googleapis.com/youtube/v3/videos';

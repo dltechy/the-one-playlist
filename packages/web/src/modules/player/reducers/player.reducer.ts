@@ -1,6 +1,7 @@
 import { compareMediaIds, MediaId } from '../types/mediaId';
 import { MediaInfoList } from '../types/mediaInfoList';
 import { MediaService } from '../types/mediaService';
+import { PlaylistInfo } from '../types/playlistInfo';
 
 export enum PlayerActionType {
   Play = 'PLAY',
@@ -26,12 +27,15 @@ export enum PlayerActionType {
   MuteOff = 'MUTE_OFF',
   ToggleMute = 'TOGGLE_MUTE',
 
-  AddMediaList = 'ADD_MEDIA_LIST',
+  UpdatePlaylistInfoList = 'UPDATE_PLAYLIST_INFO_LIST',
   UpdateMediaIds = 'UPDATE_MEDIA_IDS',
 
   PlayPrevious = 'PLAY_PREVIOUS',
   PlayNext = 'PLAY_NEXT',
   PlayMediaAt = 'PLAY_MEDIA_AT',
+
+  OpenPlaylistManager = 'OPEN_PLAYLIST_MANAGER',
+  ClosePlaylistManager = 'CLOSE_PLAYLIST_MANAGER',
 }
 
 export interface PlayerAction {
@@ -53,10 +57,12 @@ export interface PlayerState {
   isMuted: boolean;
   isSettingVolume: boolean;
 
-  originalMediaIds: MediaId[];
+  playlistInfoList: PlaylistInfo[];
   mediaIds: MediaId[];
   mediaInfoList: MediaInfoList;
   mediaIndex: number;
+
+  isPlaylistManagerOpen: boolean;
 }
 
 const shufflePlaylist = (
@@ -67,7 +73,14 @@ const shufflePlaylist = (
 ): PlayerState => {
   const newState = { ...state };
 
-  const newMediaIds = [...state.originalMediaIds];
+  const newMediaIds = state.playlistInfoList
+    .map((playlist) =>
+      playlist.mediaIds.map((id) => ({
+        service: playlist.service,
+        id,
+      })),
+    )
+    .flat();
 
   if (state.isShuffleOn) {
     let currentIndex = newMediaIds.length;
@@ -214,23 +227,17 @@ export const playerReducer = (
       return { ...state, isMuted: !state.isMuted };
     }
 
-    case PlayerActionType.AddMediaList: {
-      const originalMediaIds = [
-        ...state.originalMediaIds,
-        ...(action.payload?.originalMediaIds ?? []),
-      ];
+    case PlayerActionType.UpdatePlaylistInfoList: {
+      const playlistInfoList = [...(action.payload?.playlistInfoList ?? [])];
       const mediaInfoList = {
         [MediaService.None]: {
-          ...state.mediaInfoList[MediaService.None],
           ...((action.payload?.mediaInfoList ?? {})[MediaService.None] ?? {}),
         },
         [MediaService.YouTube]: {
-          ...state.mediaInfoList[MediaService.YouTube],
           ...((action.payload?.mediaInfoList ?? {})[MediaService.YouTube] ??
             {}),
         },
         [MediaService.Spotify]: {
-          ...state.mediaInfoList[MediaService.Spotify],
           ...((action.payload?.mediaInfoList ?? {})[MediaService.Spotify] ??
             {}),
         },
@@ -239,7 +246,7 @@ export const playerReducer = (
       return shufflePlaylist(
         {
           ...state,
-          originalMediaIds,
+          playlistInfoList,
           mediaInfoList,
         },
         { keepCurrentMedia: false },
@@ -276,6 +283,13 @@ export const playerReducer = (
         ...state,
         mediaIndex: action.payload?.mediaIndex ?? state.mediaIndex,
       };
+    }
+
+    case PlayerActionType.OpenPlaylistManager: {
+      return { ...state, isPlaylistManagerOpen: true };
+    }
+    case PlayerActionType.ClosePlaylistManager: {
+      return { ...state, isPlaylistManagerOpen: false };
     }
 
     default: {

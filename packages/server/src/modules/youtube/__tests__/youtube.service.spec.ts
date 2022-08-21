@@ -1,4 +1,4 @@
-import { HttpException } from '@nestjs/common';
+import { HttpException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { createRethrowUnknownErrorAsyncTest } from '@app/helpers/__tests__/errors/error-tests.helper';
@@ -48,6 +48,44 @@ describe('YouTubeService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('getPlaylist', () => {
+    it('should return playlist', async () => {
+      axiosMock.get.mockResolvedValue(youtubeSample1.playlistResponse);
+
+      const playlist = await service.getPlaylist(youtubeSample1.playlistId);
+
+      expect(playlist).toEqual(
+        expect.objectContaining(youtubeSample1.playlist),
+      );
+    });
+
+    it('should throw error if playlist is not found', async () => {
+      axiosMock.get.mockResolvedValue({
+        data: {
+          items: [],
+        },
+      });
+
+      await expect(
+        service.getPlaylist(youtubeSample1.playlistId),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('should return axios error', async () => {
+      axiosMock.get.mockRejectedValue(axiosSamples.error);
+
+      await expect(
+        service.getPlaylist(youtubeSample1.playlistId),
+      ).rejects.toBeInstanceOf(HttpException);
+    });
+
+    createRethrowUnknownErrorAsyncTest({
+      mockedObjectGetter: () => axiosMock,
+      mockedMethod: 'get',
+      testedPromiseGetter: () => service.getPlaylist(youtubeSample1.playlistId),
+    });
   });
 
   describe('getVideos', () => {

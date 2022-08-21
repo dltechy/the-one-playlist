@@ -2,6 +2,25 @@ import axios from 'axios';
 
 import { MediaInfoList } from '@app/modules/player/types/mediaInfoList';
 import { MediaService } from '@app/modules/player/types/mediaService';
+import { PlaylistInfo } from '@app/modules/player/types/playlistInfo';
+
+export const getYouTubePlaylistDetails = async (
+  playlistId: string,
+): Promise<PlaylistInfo> => {
+  const url = `${process.env.NEXT_PUBLIC_APP_SERVER_BASE_URL}/youtube/playlists/${playlistId}`;
+
+  const {
+    data: playlist,
+  }: { data: Omit<PlaylistInfo, 'service' | 'mediaIds'> } = await axios.get(
+    url,
+  );
+
+  return {
+    ...playlist,
+    service: MediaService.YouTube,
+    mediaIds: [],
+  };
+};
 
 export const getYouTubeVideoDetails = async (
   videoIds: string[],

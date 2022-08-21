@@ -17,6 +17,7 @@ import {
   QsType,
 } from '@app/helpers/imports/imports.helper';
 import { MediaInfoList } from '@app/types/media-info-list';
+import { PlaylistInfo } from '@app/types/playlist-info';
 
 @Injectable()
 export class SpotifyService {
@@ -235,6 +236,59 @@ export class SpotifyService {
   public async logout({ res }: { res: Response }): Promise<void> {
     res.clearCookie('spotifyAccessToken');
     res.clearCookie('spotifyRefreshToken');
+  }
+
+  public async getPlaylist({
+    playlistId,
+    req,
+    res,
+  }: {
+    playlistId: string;
+    req: Request;
+    res: Response;
+  }): Promise<PlaylistInfo> {
+    let accessToken = req.cookies.spotifyAccessToken;
+
+    if (!accessToken) {
+      ({ accessToken } = await this.token({ req, res }));
+    }
+
+    const url = `https://api.spotify.com/v1/playlists/${playlistId}`;
+
+    const fields = encodeURIComponent(`name,images,tracks.total`);
+
+    const query = `fields=${fields}`;
+
+    try {
+      const { data }: { data: SpotifyApi.SinglePlaylistResponse } =
+        await this.axios.get(`${url}?${query}`, {
+          headers: {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+      const thumbnail = data.images[0];
+
+      const playlist: PlaylistInfo = {
+        id: playlistId,
+        title: data.name,
+        thumbnail: {
+          url: thumbnail.url,
+          width: thumbnail.width ?? 0,
+          height: thumbnail.height ?? 0,
+        },
+        itemCount: data.tracks.total,
+      };
+
+      return playlist;
+    } catch (e) {
+      if (e instanceof AxiosError && e.response) {
+        throw new HttpException(e.response.data, e.response.status);
+      }
+
+      throw e;
+    }
   }
 
   public async getPlaylistTracks({

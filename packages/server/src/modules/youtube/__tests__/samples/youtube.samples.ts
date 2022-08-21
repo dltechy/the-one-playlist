@@ -1,17 +1,49 @@
 import { MediaInfoList } from '@app/types/media-info-list';
+import { PlaylistInfo } from '@app/types/playlist-info';
 
 import {
-  SAMPLE_AUTHORS,
-  SAMPLE_THUMBNAIL_URL,
-  SAMPLE_TITLE,
+  SAMPLE_PLAYLIST_ID,
+  SAMPLE_PLAYLIST_THUMBNAIL_URL,
+  SAMPLE_PLAYLIST_TITLE,
+  SAMPLE_VIDEO_AUTHORS,
   SAMPLE_VIDEO_ID,
+  SAMPLE_VIDEO_THUMBNAIL_URL,
+  SAMPLE_VIDEO_TITLE,
 } from '../constants/youtube.constants';
+
+function createPlaylistId(id: number): string {
+  return `${SAMPLE_PLAYLIST_ID}${id}`;
+}
+
+function createSamplePlaylist({
+  id,
+  thumbnail,
+  itemCount,
+}: {
+  id: number;
+  thumbnail: {
+    width: number;
+    height: number;
+  };
+  itemCount: number;
+}): PlaylistInfo {
+  return {
+    id: `${SAMPLE_PLAYLIST_ID}${id}`,
+    title: `${SAMPLE_PLAYLIST_TITLE}${id}`,
+    thumbnail: {
+      url: `${SAMPLE_PLAYLIST_THUMBNAIL_URL}${id}`,
+      width: thumbnail.width,
+      height: thumbnail.height,
+    },
+    itemCount,
+  };
+}
 
 function createVideoId(id: number): string[] {
   return [`${SAMPLE_VIDEO_ID}${id}`];
 }
 
-function createSample({
+function createSampleVideo({
   id,
   thumbnail,
   duration,
@@ -25,14 +57,43 @@ function createSample({
 }): MediaInfoList {
   return {
     [`${SAMPLE_VIDEO_ID}${id}`]: {
-      title: `${SAMPLE_TITLE}${id}`,
-      authors: `${SAMPLE_AUTHORS}${id}`,
+      title: `${SAMPLE_VIDEO_TITLE}${id}`,
+      authors: `${SAMPLE_VIDEO_AUTHORS}${id}`,
       thumbnail: {
-        url: `${SAMPLE_THUMBNAIL_URL}${id}`,
+        url: `${SAMPLE_VIDEO_THUMBNAIL_URL}${id}`,
         width: thumbnail.width,
         height: thumbnail.height,
       },
       duration,
+    },
+  };
+}
+
+function createSamplePlaylistResponse(playlist: PlaylistInfo): {
+  data: GoogleAppsScript.YouTube.Schema.PlaylistListResponse;
+} {
+  const { id, title, thumbnail, itemCount } = playlist;
+
+  return {
+    data: {
+      items: [
+        {
+          id,
+          snippet: {
+            title,
+            thumbnails: {
+              default: {
+                url: thumbnail.url,
+                width: thumbnail.width,
+                height: thumbnail.height,
+              },
+            },
+          },
+          contentDetails: {
+            itemCount,
+          },
+        },
+      ],
     },
   };
 }
@@ -77,27 +138,49 @@ function createSampleVideosResponse(videos: MediaInfoList): {
 
 function createSamples({
   id,
-  thumbnail,
+  playlistThumbnail,
+  itemCount,
+  videoThumbnail,
   duration,
 }: {
   id: number;
-  thumbnail: {
+  playlistThumbnail: {
+    width: number;
+    height: number;
+  };
+  itemCount: number;
+  videoThumbnail: {
     width: number;
     height: number;
   };
   duration: number;
 }): {
+  playlistId: string;
+  playlist: PlaylistInfo;
   videoIds: string[];
   videos: MediaInfoList;
+  playlistResponse: {
+    data: GoogleAppsScript.YouTube.Schema.PlaylistListResponse;
+  };
   videosResponse: { data: GoogleAppsScript.YouTube.Schema.VideoListResponse };
 } {
+  const playlistId = createPlaylistId(id);
+  const playlist = createSamplePlaylist({
+    id,
+    thumbnail: playlistThumbnail,
+    itemCount,
+  });
   const videoIds = createVideoId(id);
-  const videos = createSample({ id, thumbnail, duration });
+  const videos = createSampleVideo({ id, thumbnail: videoThumbnail, duration });
+  const playlistResponse = createSamplePlaylistResponse(playlist);
   const videosResponse = createSampleVideosResponse(videos);
 
   return {
+    playlistId,
+    playlist,
     videoIds,
     videos,
+    playlistResponse,
     videosResponse,
   };
 }
@@ -105,7 +188,12 @@ function createSamples({
 export const youtubeSamples = [
   createSamples({
     id: 1,
-    thumbnail: {
+    playlistThumbnail: {
+      width: 1280,
+      height: 720,
+    },
+    itemCount: 1,
+    videoThumbnail: {
       width: 1280,
       height: 720,
     },
@@ -113,7 +201,12 @@ export const youtubeSamples = [
   }),
   createSamples({
     id: 2,
-    thumbnail: {
+    playlistThumbnail: {
+      width: 1280,
+      height: 720,
+    },
+    itemCount: 1,
+    videoThumbnail: {
       width: 1280,
       height: 720,
     },
@@ -121,7 +214,12 @@ export const youtubeSamples = [
   }),
   createSamples({
     id: 3,
-    thumbnail: {
+    playlistThumbnail: {
+      width: 1280,
+      height: 720,
+    },
+    itemCount: 1,
+    videoThumbnail: {
       width: 1280,
       height: 720,
     },

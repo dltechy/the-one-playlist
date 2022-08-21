@@ -7,7 +7,8 @@ import { YouTube } from '@app/modules/youtube/components/YouTube';
 
 import { MediaController } from '../components/MediaController';
 import { Playlist } from '../components/Playlist';
-import { PlaylistLinkInput } from '../components/PlaylistLinkInput';
+import { PlaylistManager } from '../components/PlaylistManager';
+import { ServicePlaceholder } from '../components/ServicePlaceholder';
 import { PlayerContext, PlayerContextType } from '../contexts/player.context';
 import { playerReducer } from '../reducers/player.reducer';
 import { createEmptyMediaInfoList } from '../types/mediaInfoList';
@@ -41,10 +42,12 @@ export const Player: FC = () => {
     isMuted: false,
     isSettingVolume: false,
 
-    originalMediaIds: [],
+    playlistInfoList: [],
     mediaIds: [],
     mediaInfoList: createEmptyMediaInfoList(),
     mediaIndex: 0,
+
+    isPlaylistManagerOpen: true,
   });
 
   const contextState = useMemo<PlayerContextType>(
@@ -151,6 +154,14 @@ export const Player: FC = () => {
     return (
       <>
         <Box
+          display={mediaService === MediaService.None ? 'block' : 'none'}
+          width="100%"
+          height="100%"
+        >
+          <ServicePlaceholder />
+        </Box>
+
+        <Box
           display={mediaService === MediaService.YouTube ? 'block' : 'none'}
           width="100%"
           height="100%"
@@ -180,10 +191,6 @@ export const Player: FC = () => {
           inset: `0 ${PLAYLIST_WIDTH + getSpacingPx(DEFAULT_MARGIN)}px 0 0`,
         }}
       >
-        <Box width="100%" maxWidth={PLAYER_MAX_WIDTH}>
-          <PlaylistLinkInput />
-        </Box>
-
         <Box ref={playerRef} width={playerWidth} height={playerHeight}>
           {renderServices()}
         </Box>
@@ -201,6 +208,8 @@ export const Player: FC = () => {
       >
         <Playlist />
       </Box>
+
+      <PlaylistManager />
     </PlayerContext.Provider>
   );
 };

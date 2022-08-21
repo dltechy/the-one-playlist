@@ -5,11 +5,14 @@ import * as request from 'supertest';
 import { YouTubeController } from '../youtube.controller';
 import { YouTubeService } from '../youtube.service';
 import { youtubeServiceMock } from './mocks/youtube.mocks';
+import { youtubeSamples } from './samples/youtube.samples';
 
 describe('YouTubeController (routes)', () => {
   // Properties & methods
 
   let app: INestApplication;
+
+  const [youtubeSample1] = youtubeSamples;
 
   const initializeModule = async (): Promise<TestingModule> => {
     const module = await Test.createTestingModule({
@@ -49,6 +52,14 @@ describe('YouTubeController (routes)', () => {
   });
 
   // Tests
+
+  it('should connect to "GET /youtube/playlists/:id"', async () => {
+    await request(app.getHttpServer()).get(
+      `/youtube/playlists/${youtubeSample1.playlistId}`,
+    );
+
+    expect(youtubeServiceMock.getPlaylist).toHaveBeenCalled();
+  });
 
   it('should connect to "GET /youtube/videos"', async () => {
     await request(app.getHttpServer()).get('/youtube/videos');

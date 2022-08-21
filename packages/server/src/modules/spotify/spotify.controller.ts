@@ -22,7 +22,9 @@ import { Request, Response } from 'express';
 
 import { AppConfig } from '@app/config/app.config';
 import { MediaInfoList, mediaInfoListSchema } from '@app/types/media-info-list';
+import { PlaylistInfo, playlistInfoSchema } from '@app/types/playlist-info';
 
+import { GetPlaylistParamsDto } from './dtos/get-playlist-params.dto';
 import { GetPlaylistTracksParamsDto } from './dtos/get-playlist-tracks-params.dto';
 import { LoginCallbackQueryDto } from './dtos/login-callback-query.dto';
 import { PlayTrackDto } from './dtos/play-track.dto';
@@ -94,6 +96,27 @@ export class SpotifyController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
     await this.spotifyService.logout({ res });
+  }
+
+  @Get('playlists/:id')
+  @ApiOperation({ summary: 'Retrieves playlist data from Spotify' })
+  @ApiOkResponse({
+    description: 'Playlist data successfully retrieved',
+    schema: playlistInfoSchema,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid input' })
+  public async getPlaylist(
+    @Param() { id: playlistId }: GetPlaylistParamsDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<PlaylistInfo> {
+    const playlist = await this.spotifyService.getPlaylist({
+      playlistId,
+      req,
+      res,
+    });
+
+    return playlist;
   }
 
   @Get('playlists/:id/tracks')

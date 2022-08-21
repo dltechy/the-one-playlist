@@ -47,6 +47,18 @@ describe('YouTubeController', () => {
     expect(controller).toBeDefined();
   });
 
+  describe('getPlaylist', () => {
+    it('should return playlist', async () => {
+      youtubeServiceMock.getPlaylist.mockResolvedValue(youtubeSample1.playlist);
+
+      const playlist = await controller.getPlaylist({
+        id: youtubeSample1.playlistId,
+      });
+
+      expect(playlist).toEqual(youtubeSample1.playlist);
+    });
+  });
+
   describe('getVideos', () => {
     it('should return videos', async () => {
       youtubeServiceMock.getVideos.mockResolvedValue(youtubeSample1.videos);

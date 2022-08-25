@@ -115,6 +115,22 @@ describe('SpotifyController', () => {
     });
   });
 
+  describe('getAlbum', () => {
+    it('should return album', async () => {
+      spotifyServiceMock.getAlbum.mockResolvedValue(spotifySample1.album);
+
+      const album = await controller.getAlbum(
+        {
+          id: spotifySample1.albumId,
+        },
+        reqMock as {} as Request,
+        resMock as {} as Response,
+      );
+
+      expect(album).toEqual(spotifySample1.album);
+    });
+  });
+
   describe('getPlaylistTracks', () => {
     it('should return tracks', async () => {
       spotifyServiceMock.getPlaylistTracks.mockResolvedValue(
@@ -130,6 +146,42 @@ describe('SpotifyController', () => {
       );
 
       expect(tracks).toEqual(spotifySample1.tracks);
+    });
+  });
+
+  describe('getAlbumTracks', () => {
+    it('should return tracks', async () => {
+      spotifyServiceMock.getAlbumTracks.mockResolvedValue(
+        spotifySample1.tracks,
+      );
+
+      const tracks = await controller.getAlbumTracks(
+        {
+          id: spotifySample1.albumId,
+        },
+        reqMock as {} as Request,
+        resMock as {} as Response,
+      );
+
+      expect(tracks).toEqual(spotifySample1.tracks);
+    });
+  });
+
+  describe('getTracks', () => {
+    it('should return tracks', async () => {
+      spotifyServiceMock.getTracks.mockResolvedValue(
+        spotifySample1.tracks.tracks,
+      );
+
+      const tracks = await controller.getTracks(
+        {
+          trackIds: spotifySample1.tracks.trackIds,
+        },
+        reqMock as {} as Request,
+        resMock as {} as Response,
+      );
+
+      expect(tracks).toEqual(spotifySample1.tracks.tracks);
     });
   });
 

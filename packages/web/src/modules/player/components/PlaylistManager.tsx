@@ -18,7 +18,9 @@ import {
   ListSubheader,
   Modal,
   Stack,
+  SxProps,
   TextField,
+  Theme,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -43,20 +45,24 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 
 import {
-  getSpotifyPlaylistDetails,
+  getSpotifyAlbumTrackDetails,
   getSpotifyPlaylistTrackDetails,
+  getSpotifyTrackDetails,
   spotifyLogin,
   spotifyLogout,
 } from '@app/modules/spotify/apis/spotify.api';
 import {
   connect as spotifyConnect,
   disconnect as spotifyDisconnect,
+  getBaseSpotifyPlaylistInfo,
+  getSpotifyPlaylistInfo,
 } from '@app/modules/spotify/helpers/spotify.helper';
+import { getYouTubeVideoDetails } from '@app/modules/youtube/apis/youtube.api';
 import {
-  getYouTubePlaylistDetails,
-  getYouTubeVideoDetails,
-} from '@app/modules/youtube/apis/youtube.api';
-import { loadYouTubePlaylist } from '@app/modules/youtube/helpers/youtubePlaylist.helper';
+  getBaseYouTubePlaylistInfo,
+  getYouTubePlaylistInfo,
+} from '@app/modules/youtube/helpers/youtube.helper';
+import { getYouTubePlaylistVideoIds } from '@app/modules/youtube/helpers/youtubePlaylist.helper';
 
 import { PlayerContext, PlayerContextType } from '../contexts/player.context';
 import { PlayerActionType } from '../reducers/player.reducer';
@@ -65,7 +71,8 @@ import {
   MediaInfoList,
 } from '../types/mediaInfoList';
 import { MediaService } from '../types/mediaService';
-import { PlaylistInfo } from '../types/playlistInfo';
+import { comparePlaylistInfo, PlaylistInfo } from '../types/playlistInfo';
+import { PlaylistType } from '../types/playlistType';
 
 export const PlaylistManager: FC = () => {
   // Properties
@@ -110,6 +117,7 @@ export const PlaylistManager: FC = () => {
 
   const [tempPlaylistInfoList, setTempPlaylistInfoList] =
     useState(playlistInfoList);
+  const [tempMediaInfoList, setTempMediaInfoList] = useState(mediaInfoList);
   const prevIsPlaylistManagerOpen = useRef(!isPlaylistManagerOpen);
 
   const [tick, setTick] = useState(false);
@@ -133,16 +141,28 @@ export const PlaylistManager: FC = () => {
 
   const loadYouTube = useCallback(
     async (
-      playlistInfo: PlaylistInfo,
+      _playlistInfoList: PlaylistInfo[],
     ): Promise<MediaInfoList[MediaService.YouTube]> => {
-      const videoIds = await loadYouTubePlaylist(playlistInfo.id);
-      const videos = await getYouTubeVideoDetails(videoIds);
+      const videoIds: string[] = [];
 
-      videoIds.forEach((id) => {
-        playlistInfo.mediaIds.push(id);
-      });
+      for (let i = 0; i < _playlistInfoList.length; i += 1) {
+        const playlistInfo = _playlistInfoList[i];
 
-      return videos;
+        switch (playlistInfo.type) {
+          case PlaylistType.Video: {
+            break;
+          }
+          default: {
+            // eslint-disable-next-line no-await-in-loop
+            const _videoIds = await getYouTubePlaylistVideoIds(playlistInfo.id);
+
+            playlistInfo.mediaIds.push(..._videoIds);
+            videoIds.push(..._videoIds);
+          }
+        }
+      }
+
+      return videoIds.length > 0 ? getYouTubeVideoDetails(videoIds) : {};
     },
     [],
   );
@@ -151,15 +171,37 @@ export const PlaylistManager: FC = () => {
     async (
       playlistInfo: PlaylistInfo,
     ): Promise<MediaInfoList[MediaService.Spotify]> => {
-      const { trackIds, tracks } = await getSpotifyPlaylistTrackDetails(
-        playlistInfo.id,
-      );
+      switch (playlistInfo.type) {
+        case PlaylistType.Playlist: {
+          const { trackIds, tracks } = await getSpotifyPlaylistTrackDetails(
+            playlistInfo.id,
+          );
 
-      trackIds.forEach((id) => {
-        playlistInfo.mediaIds.push(id);
-      });
+          trackIds.forEach((id) => {
+            playlistInfo.mediaIds.push(id);
+          });
 
-      return tracks;
+          return tracks;
+        }
+        case PlaylistType.Album: {
+          const { trackIds, tracks } = await getSpotifyAlbumTrackDetails(
+            playlistInfo.id,
+          );
+
+          trackIds.forEach((id) => {
+            playlistInfo.mediaIds.push(id);
+          });
+
+          return tracks;
+        }
+        case PlaylistType.Track: {
+          const tracks = await getSpotifyTrackDetails([playlistInfo.id]);
+          return tracks;
+        }
+        default: {
+          return {};
+        }
+      }
     },
     [],
   );
@@ -178,7 +220,7 @@ export const PlaylistManager: FC = () => {
 
       prevIsPlaylistManagerOpen.current = isPlaylistManagerOpen;
     }
-  }, [isPlaylistManagerOpen, playlistInfoList, animationId]);
+  }, [isPlaylistManagerOpen, animationId]);
 
   // Focus on input when modal is opened
   useEffect(() => {
@@ -235,50 +277,84 @@ export const PlaylistManager: FC = () => {
 
           const loadedPlaylistIds: string[] = [];
 
+          /* eslint-disable no-await-in-loop */
           for (let i = 0; i < playlistIds.length; i += 1) {
             try {
               const playlistId = playlistIds[i];
-              const [service, id] = playlistId.split(' ');
+              const [service, type, id] = playlistId.split(' ') as [
+                MediaService,
+                PlaylistType,
+                string,
+              ];
 
-              if (service != null && id != null) {
-                /* eslint-disable no-await-in-loop */
-                switch (service) {
-                  case MediaService.YouTube: {
-                    const playlistInfo = await getYouTubePlaylistDetails(id);
-                    const videos = await loadYouTube(playlistInfo);
+              const basePlaylistInfo = { service, type, id } as PlaylistInfo;
 
-                    newTempPlaylistInfoList.push(playlistInfo);
-                    Object.keys(videos).forEach((mediaId) => {
-                      newMediaInfoList[playlistInfo.service][mediaId] =
-                        videos[mediaId];
-                    });
-                    break;
-                  }
-                  case MediaService.Spotify: {
-                    const playlistInfo = await getSpotifyPlaylistDetails(id);
-                    const tracks = await loadSpotify(playlistInfo);
+              let playlistInfo: PlaylistInfo | undefined;
+              let mediaInfo: MediaInfoList[MediaService.None] | undefined;
 
-                    newTempPlaylistInfoList.push(playlistInfo);
-                    Object.keys(tracks).forEach((mediaId) => {
-                      newMediaInfoList[playlistInfo.service][mediaId] =
-                        tracks[mediaId];
-                    });
-                    break;
-                  }
-                  default: {
-                    break;
-                  }
+              switch (service) {
+                case MediaService.YouTube: {
+                  ({ playlistInfo, mediaInfo } = await getYouTubePlaylistInfo(
+                    basePlaylistInfo,
+                  ));
+                  break;
                 }
-                /* eslint-enable no-await-in-loop */
+                case MediaService.Spotify: {
+                  ({ playlistInfo, mediaInfo } = await getSpotifyPlaylistInfo(
+                    basePlaylistInfo,
+                  ));
+                  break;
+                }
+                default: {
+                  break;
+                }
               }
 
-              loadedPlaylistIds.push(playlistId);
+              if (playlistInfo) {
+                newTempPlaylistInfoList.push(playlistInfo);
+
+                if (mediaInfo) {
+                  newMediaInfoList[service][id] = mediaInfo[id];
+                } else {
+                  switch (service) {
+                    case MediaService.Spotify: {
+                      const tracks = await loadSpotify(playlistInfo);
+
+                      Object.keys(tracks).forEach((trackId) => {
+                        if (playlistInfo && type === PlaylistType.Album) {
+                          tracks[trackId].thumbnail = {
+                            ...playlistInfo.thumbnail,
+                          };
+                        }
+
+                        newMediaInfoList[service][trackId] = tracks[trackId];
+                      });
+                      break;
+                    }
+                    default: {
+                      break;
+                    }
+                  }
+                }
+
+                loadedPlaylistIds.push(playlistId);
+              }
             } catch {
               // Do nothing
             }
           }
+          /* eslint-enable no-await-in-loop */
+
+          const youtubePlaylistInfoList = newTempPlaylistInfoList.filter(
+            (playlistInfo) => playlistInfo.service === MediaService.YouTube,
+          );
+          const videos = await loadYouTube(youtubePlaylistInfoList);
+          Object.keys(videos).forEach((videoId) => {
+            newMediaInfoList[MediaService.YouTube][videoId] = videos[videoId];
+          });
 
           setTempPlaylistInfoList(newTempPlaylistInfoList);
+          setTempMediaInfoList(newMediaInfoList);
 
           playerDispatch({
             type: PlayerActionType.UpdatePlaylistInfoList,
@@ -339,59 +415,78 @@ export const PlaylistManager: FC = () => {
 
         let playlistError = 'Invalid playlist link';
 
-        const youtubeLinkRegex =
-          /^https?:\/\/www\.youtube\.com\/playlist\?.*list=([^&]+).*$/;
-        const spotifyLinkRegex =
-          /^https?:\/\/(?:[^/]*\.)*spotify\.com\/playlist\/([^/?]+).*$/;
+        let basePlaylistInfo: PlaylistInfo | null;
+        let playlistInfo: PlaylistInfo | undefined;
+        let mediaInfo: MediaInfoList[MediaService.None] | undefined;
 
-        let match = youtubeLinkRegex.exec(playlistLink);
-        if (match && match[1]) {
-          const playlistId = match[1];
+        basePlaylistInfo = getBaseYouTubePlaylistInfo(playlistLink);
+        if (basePlaylistInfo != null) {
+          ({ playlistInfo, mediaInfo } = await getYouTubePlaylistInfo(
+            basePlaylistInfo,
+          ));
+        }
+
+        if (basePlaylistInfo == null) {
+          basePlaylistInfo = getBaseSpotifyPlaylistInfo(playlistLink);
+          if (basePlaylistInfo != null) {
+            ({ playlistInfo, mediaInfo } = await getSpotifyPlaylistInfo(
+              basePlaylistInfo,
+            ));
+          }
+        }
+
+        if (playlistInfo) {
           if (
             tempPlaylistInfoList.findIndex(
-              (playlistInfo) =>
-                playlistInfo.service === MediaService.YouTube &&
-                playlistInfo.id === playlistId,
+              (info) => playlistInfo && comparePlaylistInfo(info, playlistInfo),
             ) === -1
           ) {
-            const playlistInfo = await getYouTubePlaylistDetails(playlistId);
-
             setTempPlaylistInfoList((prev) => {
               const newTempPlaylistInfoList = [...prev];
-              newTempPlaylistInfoList.push(playlistInfo);
+              if (playlistInfo) {
+                newTempPlaylistInfoList.push(playlistInfo);
+              }
 
               return newTempPlaylistInfoList;
             });
 
+            setTempMediaInfoList((prev) => {
+              const newTempMediaInfoList = { ...prev };
+              if (mediaInfo) {
+                Object.keys(mediaInfo).forEach((mediaId) => {
+                  if (playlistInfo && mediaInfo) {
+                    newTempMediaInfoList[playlistInfo.service][mediaId] =
+                      mediaInfo[mediaId];
+                  }
+                });
+              }
+
+              return newTempMediaInfoList;
+            });
+
             playlistError = '';
           } else {
-            playlistError = 'Playlist already exists';
-          }
-        }
-
-        if (!match) {
-          match = spotifyLinkRegex.exec(playlistLink);
-          if (match && match[1]) {
-            const playlistId = match[1];
-            if (
-              tempPlaylistInfoList.findIndex(
-                (playlistInfo) =>
-                  playlistInfo.service === MediaService.Spotify &&
-                  playlistInfo.id === playlistId,
-              ) === -1
-            ) {
-              const playlistInfo = await getSpotifyPlaylistDetails(playlistId);
-
-              setTempPlaylistInfoList((prev) => {
-                const newTempPlaylistInfoList = [...prev];
-                newTempPlaylistInfoList.push(playlistInfo);
-
-                return newTempPlaylistInfoList;
-              });
-
-              playlistError = '';
-            } else {
-              playlistError = 'Playlist already exists';
+            switch (playlistInfo.type) {
+              case PlaylistType.Playlist: {
+                playlistError = 'Playlist already exists';
+                break;
+              }
+              case PlaylistType.Album: {
+                playlistError = 'Album already exists';
+                break;
+              }
+              case PlaylistType.Video: {
+                playlistError = 'Video already exists';
+                break;
+              }
+              case PlaylistType.Track: {
+                playlistError = 'Track already exists';
+                break;
+              }
+              default: {
+                playlistError = 'Unknown playlist type';
+                break;
+              }
             }
           }
         }
@@ -415,7 +510,7 @@ export const PlaylistManager: FC = () => {
 
       const prevPlaylistInfo = playlistInfoList.reduce(
         (prev, current) => {
-          prev[`${current.service} ${current.id}`] = current;
+          prev[`${current.service} ${current.type} ${current.id}`] = current;
           return prev;
         },
         {} as {
@@ -427,48 +522,67 @@ export const PlaylistManager: FC = () => {
       const newMediaInfoList: MediaInfoList = { ...createEmptyMediaInfoList() };
 
       const playlistIds = newPlaylistInfoList.map(
-        (playlistInfo) => `${playlistInfo.service} ${playlistInfo.id}`,
+        ({ service, type, id }) => `${service} ${type} ${id}`,
       );
 
       /* eslint-disable no-await-in-loop */
       for (let i = 0; i < newPlaylistInfoList.length; i += 1) {
         const playlistInfo = newPlaylistInfoList[i];
-        const playlistId = `${playlistInfo.service} ${playlistInfo.id}`;
+
+        const { service, type, id, thumbnail } = playlistInfo;
+        const playlistId = `${service} ${type} ${id}`;
 
         if (prevPlaylistInfo[playlistId]) {
           playlistInfo.mediaIds = prevPlaylistInfo[playlistId].mediaIds;
 
           playlistInfo.mediaIds.forEach((mediaId) => {
-            newMediaInfoList[playlistInfo.service][mediaId] =
-              mediaInfoList[playlistInfo.service][mediaId];
+            newMediaInfoList[service][mediaId] =
+              tempMediaInfoList[service][mediaId];
           });
         } else {
-          switch (playlistInfo.service) {
-            case MediaService.YouTube: {
-              const videos = await loadYouTube(playlistInfo);
-
-              Object.keys(videos).forEach((mediaId) => {
-                newMediaInfoList[playlistInfo.service][mediaId] =
-                  videos[mediaId];
-              });
-              break;
-            }
-            case MediaService.Spotify: {
-              const tracks = await loadSpotify(playlistInfo);
-
-              Object.keys(tracks).forEach((mediaId) => {
-                newMediaInfoList[playlistInfo.service][mediaId] =
-                  tracks[mediaId];
-              });
+          switch (type) {
+            case PlaylistType.Video:
+            case PlaylistType.Track: {
+              newMediaInfoList[service][playlistInfo.mediaIds[0]] =
+                tempMediaInfoList[service][playlistInfo.mediaIds[0]];
               break;
             }
             default: {
+              switch (service) {
+                case MediaService.Spotify: {
+                  const tracks = await loadSpotify(playlistInfo);
+
+                  Object.keys(tracks).forEach((trackId) => {
+                    if (type === PlaylistType.Album) {
+                      tracks[trackId].thumbnail = { ...thumbnail };
+                    }
+
+                    newMediaInfoList[service][trackId] = tracks[trackId];
+                  });
+                  break;
+                }
+                default: {
+                  break;
+                }
+              }
               break;
             }
           }
         }
       }
       /* eslint-enable no-await-in-loop */
+
+      const youtubePlaylistInfoList = newPlaylistInfoList.filter(
+        (playlistInfo) =>
+          playlistInfo.service === MediaService.YouTube &&
+          !prevPlaylistInfo[
+            `${playlistInfo.service} ${playlistInfo.type} ${playlistInfo.id}`
+          ],
+      );
+      const videos = await loadYouTube(youtubePlaylistInfoList);
+      Object.keys(videos).forEach((videoId) => {
+        newMediaInfoList[MediaService.YouTube][videoId] = videos[videoId];
+      });
 
       router.replace({
         query: {
@@ -480,6 +594,7 @@ export const PlaylistManager: FC = () => {
       setPlaylistLink('');
       setPlaylistLinkError('');
       setTempPlaylistInfoList(newPlaylistInfoList);
+      setTempMediaInfoList(newMediaInfoList);
 
       playerDispatch({
         type: PlayerActionType.UpdatePlaylistInfoList,
@@ -502,6 +617,7 @@ export const PlaylistManager: FC = () => {
       setPlaylistLink('');
       setPlaylistLinkError('');
       setTempPlaylistInfoList(playlistInfoList);
+      setTempMediaInfoList(mediaInfoList);
 
       playerDispatch({
         type: PlayerActionType.ClosePlaylistManager,
@@ -552,6 +668,21 @@ export const PlaylistManager: FC = () => {
     );
   };
 
+  const compactListStyle: SxProps<Theme> = {
+    paddingTop: 0,
+    paddingBottom: 0,
+  };
+  const discListStyle: SxProps<Theme> = {
+    ...compactListStyle,
+    display: 'list-item',
+    listStyle: 'disc',
+  };
+  const circleListStyle: SxProps<Theme> = {
+    ...compactListStyle,
+    display: 'list-item',
+    listStyle: 'circle',
+  };
+
   return (
     <Modal open={isPlaylistManagerOpen} onClose={(): void => handleClose()}>
       <Box
@@ -560,8 +691,16 @@ export const PlaylistManager: FC = () => {
         height="100%"
         sx={{ pointerEvents: 'none' }}
       >
-        <Box margin="auto" sx={{ pointerEvents: 'auto' }}>
-          <Stack spacing={2} width={800} padding={4} bgcolor="background.paper">
+        <Box display="flex" height="100%" margin="auto">
+          <Stack
+            spacing={2}
+            width={800}
+            maxHeight="100%"
+            padding={4}
+            margin="auto"
+            bgcolor="background.paper"
+            sx={{ pointerEvents: 'auto' }}
+          >
             <Stack direction="row" spacing={1}>
               <Box
                 component="form"
@@ -629,48 +768,76 @@ export const PlaylistManager: FC = () => {
 
             {isShowingInfo ? (
               <Box>
-                <List
-                  sx={{
-                    paddingTop: 0,
-                    paddingBottom: 0,
-                  }}
-                >
+                <List sx={compactListStyle}>
                   <ListSubheader>
                     <ListItemText>Supported services:</ListItemText>
                   </ListSubheader>
-                  <ListItem
-                    sx={{
-                      paddingTop: 0,
-                      paddingBottom: 0,
-                    }}
-                  >
-                    <List
-                      sx={{
-                        paddingTop: 0,
-                        paddingBottom: 0,
-                      }}
-                    >
+                  <ListItem sx={compactListStyle}>
+                    <List sx={compactListStyle}>
                       <ListItem
                         sx={{
-                          display: 'list-item',
-                          listStyle: 'disc',
-                          paddingTop: 0,
-                          paddingBottom: 0,
+                          ...discListStyle,
                           marginLeft: 4,
                         }}
                       >
                         <ListItemText>YouTube</ListItemText>
                       </ListItem>
+                      <ListItem sx={compactListStyle}>
+                        <List sx={compactListStyle}>
+                          <ListItem
+                            sx={{
+                              ...circleListStyle,
+                              marginLeft: 8,
+                            }}
+                          >
+                            <ListItemText>Playlist</ListItemText>
+                          </ListItem>
+                          <ListItem
+                            sx={{
+                              ...circleListStyle,
+                              marginLeft: 8,
+                            }}
+                          >
+                            <ListItemText>Video</ListItemText>
+                          </ListItem>
+                        </List>
+                      </ListItem>
+
                       <ListItem
                         sx={{
-                          display: 'list-item',
-                          listStyle: 'disc',
-                          paddingTop: 0,
-                          paddingBottom: 0,
+                          ...discListStyle,
                           marginLeft: 4,
                         }}
                       >
                         <ListItemText>Spotify (login required)</ListItemText>
+                      </ListItem>
+                      <ListItem sx={compactListStyle}>
+                        <List sx={compactListStyle}>
+                          <ListItem
+                            sx={{
+                              ...circleListStyle,
+                              marginLeft: 8,
+                            }}
+                          >
+                            <ListItemText>Playlist</ListItemText>
+                          </ListItem>
+                          <ListItem
+                            sx={{
+                              ...circleListStyle,
+                              marginLeft: 8,
+                            }}
+                          >
+                            <ListItemText>Album</ListItemText>
+                          </ListItem>
+                          <ListItem
+                            sx={{
+                              ...circleListStyle,
+                              marginLeft: 8,
+                            }}
+                          >
+                            <ListItemText>Track</ListItemText>
+                          </ListItem>
+                        </List>
                       </ListItem>
                     </List>
                   </ListItem>
@@ -732,7 +899,7 @@ export const PlaylistManager: FC = () => {
                                         component="p"
                                         color="text.secondary"
                                       >
-                                        {playlistInfo.service}
+                                        {`${playlistInfo.service} - ${playlistInfo.type}`}
                                       </Typography>
                                     </Box>
 

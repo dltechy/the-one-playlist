@@ -3,8 +3,18 @@ import cookie from 'cookie';
 
 import { sleep } from '@app/helpers/timeout/sleep.helper';
 import { MediaId } from '@app/modules/player/types/mediaId';
+import { MediaInfoList } from '@app/modules/player/types/mediaInfoList';
+import { MediaService } from '@app/modules/player/types/mediaService';
+import { PlaylistInfo } from '@app/modules/player/types/playlistInfo';
+import { PlaylistType } from '@app/modules/player/types/playlistType';
 
-import { playSpotifyTrack, spotifyToken } from '../apis/spotify.api';
+import {
+  getSpotifyAlbumDetails,
+  getSpotifyPlaylistDetails,
+  getSpotifyTrackDetails,
+  playSpotifyTrack,
+  spotifyToken,
+} from '../apis/spotify.api';
 
 let player: Spotify.Player | null;
 let deviceId: string | null;
@@ -142,6 +152,88 @@ export const playTrack = async ({
 
         throw e;
       }
+    }
+  }
+};
+
+export const getBaseSpotifyPlaylistInfo = (
+  playlistLink: string,
+): PlaylistInfo | null => {
+  const linkRegex =
+    /^https?:\/\/(?:[^/]*\.)*spotify\.com\/(playlist|album|track)\/([^/?]+).*$/;
+
+  const match = linkRegex.exec(playlistLink);
+  if (match) {
+    let type: PlaylistType;
+
+    switch (match[1]) {
+      case 'playlist': {
+        type = PlaylistType.Playlist;
+        break;
+      }
+      case 'album': {
+        type = PlaylistType.Album;
+        break;
+      }
+      default: {
+        type = PlaylistType.Track;
+        break;
+      }
+    }
+
+    return {
+      service: MediaService.Spotify,
+      type,
+      id: match[2].toString(),
+    } as PlaylistInfo;
+  }
+
+  return null;
+};
+
+export const getSpotifyPlaylistInfo = async (
+  playlistInfo: PlaylistInfo,
+): Promise<{
+  playlistInfo?: PlaylistInfo;
+  mediaInfo?: MediaInfoList[MediaService.Spotify];
+}> => {
+  const { service, type, id } = playlistInfo;
+
+  switch (type) {
+    case PlaylistType.Playlist: {
+      return {
+        playlistInfo: await getSpotifyPlaylistDetails(id),
+      };
+    }
+    case PlaylistType.Album: {
+      return {
+        playlistInfo: await getSpotifyAlbumDetails(id),
+      };
+    }
+    case PlaylistType.Track: {
+      const { [id]: media } = await getSpotifyTrackDetails([id]);
+
+      if (media) {
+        return {
+          playlistInfo: {
+            service,
+            type,
+            id,
+            title: media.title,
+            thumbnail: media.thumbnail,
+            itemCount: 1,
+            mediaIds: [id],
+          },
+          mediaInfo: {
+            [id]: media,
+          },
+        };
+      }
+
+      return {};
+    }
+    default: {
+      return {};
     }
   }
 };

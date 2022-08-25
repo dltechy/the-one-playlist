@@ -93,6 +93,14 @@ describe('SpotifyController (routes)', () => {
     expect(spotifyServiceMock.getPlaylist).toHaveBeenCalled();
   });
 
+  it('should connect to "GET /spotify/albums/:id"', async () => {
+    await request(app.getHttpServer()).get(
+      `/spotify/albums/${spotifySample1.albumId}`,
+    );
+
+    expect(spotifyServiceMock.getAlbum).toHaveBeenCalled();
+  });
+
   it('should connect to "GET /spotify/playlists/:id/tracks"', async () => {
     spotifyServiceMock.getPlaylistTracks.mockResolvedValue(
       spotifySample1.tracks,
@@ -103,6 +111,26 @@ describe('SpotifyController (routes)', () => {
     );
 
     expect(spotifyServiceMock.getPlaylistTracks).toHaveBeenCalled();
+  });
+
+  it('should connect to "GET /spotify/albums/:id/tracks"', async () => {
+    spotifyServiceMock.getAlbumTracks.mockResolvedValue(spotifySample1.tracks);
+
+    await request(app.getHttpServer()).get(
+      `/spotify/albums/${spotifySample1.playlistId}/tracks`,
+    );
+
+    expect(spotifyServiceMock.getAlbumTracks).toHaveBeenCalled();
+  });
+
+  it('should connect to "GET /spotify/tracks"', async () => {
+    spotifyServiceMock.getTracks.mockResolvedValue(
+      spotifySample1.tracks.tracks,
+    );
+
+    await request(app.getHttpServer()).get(`/spotify/tracks`);
+
+    expect(spotifyServiceMock.getTracks).toHaveBeenCalled();
   });
 
   it('should connect to "POST /spotify/tracks/:id/play"', async () => {

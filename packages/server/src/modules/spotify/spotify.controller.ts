@@ -24,8 +24,11 @@ import { AppConfig } from '@app/config/app.config';
 import { MediaInfoList, mediaInfoListSchema } from '@app/types/media-info-list';
 import { PlaylistInfo, playlistInfoSchema } from '@app/types/playlist-info';
 
+import { GetAlbumParamsDto } from './dtos/get-album-params.dto';
+import { GetAlbumTracksParamsDto } from './dtos/get-album-tracks-params.dto';
 import { GetPlaylistParamsDto } from './dtos/get-playlist-params.dto';
 import { GetPlaylistTracksParamsDto } from './dtos/get-playlist-tracks-params.dto';
+import { GetTracksQueryDto } from './dtos/get-tracks-query.dto';
 import { LoginCallbackQueryDto } from './dtos/login-callback-query.dto';
 import { PlayTrackDto } from './dtos/play-track.dto';
 import { PlayTrackParamsDto } from './dtos/play-track-params.dto';
@@ -119,6 +122,27 @@ export class SpotifyController {
     return playlist;
   }
 
+  @Get('albums/:id')
+  @ApiOperation({ summary: 'Retrieves album data from Spotify' })
+  @ApiOkResponse({
+    description: 'Album data successfully retrieved',
+    schema: playlistInfoSchema,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid input' })
+  public async getAlbum(
+    @Param() { id: albumId }: GetAlbumParamsDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<PlaylistInfo> {
+    const album = await this.spotifyService.getAlbum({
+      albumId,
+      req,
+      res,
+    });
+
+    return album;
+  }
+
   @Get('playlists/:id/tracks')
   @ApiOperation({ summary: 'Retrieves playlist track data from Spotify' })
   @ApiOkResponse({
@@ -144,6 +168,54 @@ export class SpotifyController {
       trackIds,
       tracks,
     };
+  }
+
+  @Get('albums/:id/tracks')
+  @ApiOperation({ summary: 'Retrieves album track data from Spotify' })
+  @ApiOkResponse({
+    description: 'Track data successfully retrieved',
+    schema: mediaInfoListSchema,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid input' })
+  public async getAlbumTracks(
+    @Param() { id: albumId }: GetAlbumTracksParamsDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{
+    trackIds: string[];
+    tracks: MediaInfoList;
+  }> {
+    const { trackIds, tracks } = await this.spotifyService.getAlbumTracks({
+      albumId,
+      req,
+      res,
+    });
+
+    return {
+      trackIds,
+      tracks,
+    };
+  }
+
+  @Get('tracks')
+  @ApiOperation({ summary: 'Retrieves track data from Spotify' })
+  @ApiOkResponse({
+    description: 'Track data successfully retrieved',
+    schema: mediaInfoListSchema,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid input' })
+  public async getTracks(
+    @Query() { trackIds }: GetTracksQueryDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<MediaInfoList> {
+    const tracks = await this.spotifyService.getTracks({
+      trackIds,
+      req,
+      res,
+    });
+
+    return tracks;
   }
 
   @Post('tracks/:id/play')

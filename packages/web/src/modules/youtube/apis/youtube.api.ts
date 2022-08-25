@@ -3,6 +3,7 @@ import axios from 'axios';
 import { MediaInfoList } from '@app/modules/player/types/mediaInfoList';
 import { MediaService } from '@app/modules/player/types/mediaService';
 import { PlaylistInfo } from '@app/modules/player/types/playlistInfo';
+import { PlaylistType } from '@app/modules/player/types/playlistType';
 
 export const getYouTubePlaylistDetails = async (
   playlistId: string,
@@ -18,6 +19,7 @@ export const getYouTubePlaylistDetails = async (
   return {
     ...playlist,
     service: MediaService.YouTube,
+    type: PlaylistType.Playlist,
     mediaIds: [],
   };
 };

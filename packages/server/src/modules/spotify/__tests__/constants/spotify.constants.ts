@@ -6,6 +6,10 @@ export const SAMPLE_PLAYLIST_ID = 'samplePlaylistId';
 export const SAMPLE_PLAYLIST_TITLE = 'samplePlaylistTitle';
 export const SAMPLE_PLAYLIST_THUMBNAIL_URL = 'samplePlaylistThumbnailUrl';
 
+export const SAMPLE_ALBUM_ID = 'sampleAlbumId';
+export const SAMPLE_ALBUM_TITLE = 'sampleAlbumTitle';
+export const SAMPLE_ALBUM_THUMBNAIL_URL = 'sampleAlbumThumbnailUrl';
+
 export const SAMPLE_DEVICE_ID = 'sampleDeviceId';
 export const SAMPLE_TRACK_ID = 'sampleTrackId';
 export const SAMPLE_TRACK_TITLE = 'sampleTrackTitle';

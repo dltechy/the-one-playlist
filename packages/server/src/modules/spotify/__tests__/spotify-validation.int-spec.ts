@@ -104,6 +104,27 @@ describe('SpotifyController (validation)', () => {
     });
   });
 
+  describe('getAlbum', () => {
+    const requiredParams = {
+      id: spotifySample1.albumId,
+    };
+
+    createParamsValidationTests({
+      appGetter: () => app,
+      requiredParams,
+      httpMethod: HttpMethod.Get,
+      path: '/spotify/albums/:id',
+      expectedSuccessStatusCode: 200,
+      propertyTestValues: [
+        {
+          property: 'id',
+          successValues: ['string'],
+          failValues: [],
+        },
+      ],
+    });
+  });
+
   describe('getPlaylistTracks', () => {
     const requiredParams = {
       id: spotifySample1.playlistId,
@@ -125,6 +146,48 @@ describe('SpotifyController (validation)', () => {
           property: 'id',
           successValues: ['string'],
           failValues: [],
+        },
+      ],
+    });
+  });
+
+  describe('getAlbumTracks', () => {
+    const requiredParams = {
+      id: spotifySample1.albumId,
+    };
+
+    createParamsValidationTests({
+      appGetter: () => app,
+      beforeEach: () => {
+        spotifyServiceMock.getAlbumTracks.mockResolvedValue(
+          spotifySample1.tracks,
+        );
+      },
+      requiredParams,
+      httpMethod: HttpMethod.Get,
+      path: '/spotify/albums/:id/tracks',
+      expectedSuccessStatusCode: 200,
+      propertyTestValues: [
+        {
+          property: 'id',
+          successValues: ['string'],
+          failValues: [],
+        },
+      ],
+    });
+  });
+
+  describe('getTracks', () => {
+    createQueryValidationTests({
+      appGetter: () => app,
+      httpMethod: HttpMethod.Get,
+      path: '/spotify/tracks',
+      expectedSuccessStatusCode: 200,
+      propertyTestValues: [
+        {
+          property: 'trackIds',
+          successValues: ['string', ['string'], ['string1', 'string2']],
+          failValues: ['', [''], ['string1', '']],
         },
       ],
     });

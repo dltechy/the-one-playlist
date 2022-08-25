@@ -1,5 +1,7 @@
-export const loadYouTubePlaylist = (playlistId: string): Promise<string[]> => {
-  const loadYouTubePlaylistPromise = new Promise<string[]>((resolve) => {
+export const getYouTubePlaylistVideoIds = (
+  playlistId: string,
+): Promise<string[]> => {
+  const getYouTubePlaylistVideoIdsPromise = new Promise<string[]>((resolve) => {
     const PLAYER_ID = 'youtube-playlist-loader';
 
     const div = document.createElement('div');
@@ -34,5 +36,5 @@ export const loadYouTubePlaylist = (playlistId: string): Promise<string[]> => {
     });
   });
 
-  return loadYouTubePlaylistPromise;
+  return getYouTubePlaylistVideoIdsPromise;
 };

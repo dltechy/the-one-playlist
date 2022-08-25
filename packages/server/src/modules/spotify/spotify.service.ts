@@ -291,6 +291,55 @@ export class SpotifyService {
     }
   }
 
+  public async getAlbum({
+    albumId,
+    req,
+    res,
+  }: {
+    albumId: string;
+    req: Request;
+    res: Response;
+  }): Promise<PlaylistInfo> {
+    let accessToken = req.cookies.spotifyAccessToken;
+
+    if (!accessToken) {
+      ({ accessToken } = await this.token({ req, res }));
+    }
+
+    const url = `https://api.spotify.com/v1/albums/${albumId}`;
+
+    try {
+      const { data }: { data: SpotifyApi.SingleAlbumResponse } =
+        await this.axios.get(url, {
+          headers: {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+      const thumbnail = data.images[0];
+
+      const playlist: PlaylistInfo = {
+        id: albumId,
+        title: data.name,
+        thumbnail: {
+          url: thumbnail.url,
+          width: thumbnail.width ?? 0,
+          height: thumbnail.height ?? 0,
+        },
+        itemCount: data.tracks.total,
+      };
+
+      return playlist;
+    } catch (e) {
+      if (e instanceof AxiosError && e.response) {
+        throw new HttpException(e.response.data, e.response.status);
+      }
+
+      throw e;
+    }
+  }
+
   public async getPlaylistTracks({
     playlistId,
     req,
@@ -394,6 +443,189 @@ export class SpotifyService {
         trackIds,
         tracks,
       };
+    } catch (e) {
+      if (e instanceof AxiosError && e.response) {
+        throw new HttpException(e.response.data, e.response.status);
+      }
+
+      throw e;
+    }
+  }
+
+  public async getAlbumTracks({
+    albumId,
+    req,
+    res,
+  }: {
+    albumId: string;
+    req: Request;
+    res: Response;
+  }): Promise<{
+    trackIds: string[];
+    tracks: MediaInfoList;
+  }> {
+    let accessToken = req.cookies.spotifyAccessToken as string;
+
+    if (!accessToken) {
+      ({ accessToken } = await this.token({ req, res }));
+    }
+
+    const url = `https://api.spotify.com/v1/albums/${albumId}/tracks`;
+
+    let query = `limit=50`;
+
+    const rawData: {
+      items: SpotifyApi.TrackObjectSimplified[];
+      next: string;
+    } = {
+      items: [],
+      next: '',
+    };
+
+    const trackIds: string[] = [];
+    const tracks: MediaInfoList = {};
+
+    try {
+      while (query) {
+        const { data }: { data: SpotifyApi.AlbumTracksResponse } =
+          // eslint-disable-next-line no-await-in-loop
+          await this.axios.get(`${url}?${query}`, {
+            headers: {
+              // eslint-disable-next-line @typescript-eslint/naming-convention
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+
+        rawData.items = [...rawData.items, ...data.items];
+
+        if (data.next) {
+          [, query] = data.next.split('?');
+        } else {
+          query = null;
+        }
+      }
+
+      rawData.items
+        .sort((item1, item2) =>
+          item1.disc_number > item2.disc_number ||
+          (item1.disc_number === item2.disc_number &&
+            item1.track_number >= item2.track_number)
+            ? 1
+            : -1,
+        )
+        .forEach(
+          ({
+            /* eslint-disable camelcase */
+            id,
+            name: title,
+            artists,
+            duration_ms: durationMs,
+            /* eslint-enable camelcase */
+          }) => {
+            trackIds.push(id);
+            tracks[id] = {
+              title,
+              authors: artists.map(({ name }) => name).join(', '),
+              thumbnail: {
+                url: '',
+                width: 0,
+                height: 0,
+              },
+              duration: durationMs,
+            };
+          },
+        );
+
+      return {
+        trackIds,
+        tracks,
+      };
+    } catch (e) {
+      if (e instanceof AxiosError && e.response) {
+        throw new HttpException(e.response.data, e.response.status);
+      }
+
+      throw e;
+    }
+  }
+
+  public async getTracks({
+    trackIds,
+    req,
+    res,
+  }: {
+    trackIds: string[];
+    req: Request;
+    res: Response;
+  }): Promise<MediaInfoList> {
+    let accessToken = req.cookies.spotifyAccessToken as string;
+
+    if (!accessToken) {
+      ({ accessToken } = await this.token({ req, res }));
+    }
+
+    const url = `https://api.spotify.com/v1/tracks`;
+
+    const rawData: {
+      tracks: SpotifyApi.TrackObjectFull[];
+    } = {
+      tracks: [],
+    };
+
+    const tracks: MediaInfoList = {};
+
+    let startTrackId = 0;
+    let batchTrackIds: string[] = trackIds.slice(
+      startTrackId,
+      startTrackId + 50,
+    );
+
+    try {
+      while (batchTrackIds.length > 0) {
+        const query = `ids=${batchTrackIds.join(',')}`;
+
+        const { data }: { data: SpotifyApi.MultipleTracksResponse } =
+          // eslint-disable-next-line no-await-in-loop
+          await this.axios.get(`${url}?${query}`, {
+            headers: {
+              // eslint-disable-next-line @typescript-eslint/naming-convention
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+
+        rawData.tracks = [...rawData.tracks, ...data.tracks];
+
+        startTrackId += 50;
+        batchTrackIds = trackIds.slice(startTrackId, startTrackId + 50);
+      }
+
+      rawData.tracks.forEach(
+        ({
+          /* eslint-disable camelcase */
+          id,
+          name: title,
+          artists,
+          album: { images },
+          duration_ms: durationMs,
+          /* eslint-enable camelcase */
+        }) => {
+          const thumbnail = images[0];
+
+          trackIds.push(id);
+          tracks[id] = {
+            title,
+            authors: artists.map(({ name }) => name).join(', '),
+            thumbnail: {
+              url: thumbnail.url,
+              width: thumbnail.width ?? 0,
+              height: thumbnail.height ?? 0,
+            },
+            duration: durationMs,
+          };
+        },
+      );
+
+      return tracks;
     } catch (e) {
       if (e instanceof AxiosError && e.response) {
         throw new HttpException(e.response.data, e.response.status);

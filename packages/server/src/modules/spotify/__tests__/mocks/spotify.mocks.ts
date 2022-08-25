@@ -4,6 +4,9 @@ export const spotifyServiceMock = {
   token: jest.fn(),
   logout: jest.fn(),
   getPlaylist: jest.fn(),
+  getAlbum: jest.fn(),
   getPlaylistTracks: jest.fn(),
+  getAlbumTracks: jest.fn(),
+  getTracks: jest.fn(),
   playTrack: jest.fn(),
 };

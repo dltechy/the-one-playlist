@@ -5,6 +5,7 @@ import { sleep } from '@app/helpers/timeout/sleep.helper';
 import { MediaInfoList } from '@app/modules/player/types/mediaInfoList';
 import { MediaService } from '@app/modules/player/types/mediaService';
 import { PlaylistInfo } from '@app/modules/player/types/playlistInfo';
+import { PlaylistType } from '@app/modules/player/types/playlistType';
 
 export const spotifyLogin = async (): Promise<void> => {
   const url = `${process.env.NEXT_PUBLIC_APP_SERVER_BASE_URL}/spotify/auth/login`;
@@ -50,6 +51,29 @@ export const getSpotifyPlaylistDetails = async (
   return {
     ...playlist,
     service: MediaService.Spotify,
+    type: PlaylistType.Playlist,
+    mediaIds: [],
+  };
+};
+
+export const getSpotifyAlbumDetails = async (
+  albumId: string,
+): Promise<PlaylistInfo> => {
+  const url = `${process.env.NEXT_PUBLIC_APP_SERVER_BASE_URL}/spotify/albums/${albumId}`;
+
+  const {
+    data: playlist,
+  }: { data: Omit<PlaylistInfo, 'service' | 'mediaIds'> } = await axios.get(
+    url,
+    {
+      withCredentials: true,
+    },
+  );
+
+  return {
+    ...playlist,
+    service: MediaService.Spotify,
+    type: PlaylistType.Album,
     mediaIds: [],
   };
 };
@@ -86,6 +110,64 @@ export const getSpotifyPlaylistTrackDetails = async (
     trackIds: [],
     tracks: {},
   };
+};
+
+export const getSpotifyAlbumTrackDetails = async (
+  albumId: string,
+): Promise<{
+  trackIds: string[];
+  tracks: MediaInfoList[MediaService.Spotify];
+}> => {
+  const cookies = cookie.parse(document.cookie);
+  const refreshToken = cookies.spotifyRefreshToken;
+
+  if (refreshToken) {
+    const url = `${process.env.NEXT_PUBLIC_APP_SERVER_BASE_URL}/spotify/albums/${albumId}/tracks`;
+
+    const {
+      data: { trackIds, tracks },
+    }: {
+      data: {
+        trackIds: string[];
+        tracks: MediaInfoList[MediaService.Spotify];
+      };
+    } = await axios.get(url, {
+      withCredentials: true,
+    });
+
+    return {
+      trackIds,
+      tracks,
+    };
+  }
+  return {
+    trackIds: [],
+    tracks: {},
+  };
+};
+
+export const getSpotifyTrackDetails = async (
+  trackIds: string[],
+): Promise<MediaInfoList[MediaService.Spotify]> => {
+  const cookies = cookie.parse(document.cookie);
+  const refreshToken = cookies.spotifyRefreshToken;
+
+  if (refreshToken) {
+    const url = `${process.env.NEXT_PUBLIC_APP_SERVER_BASE_URL}/spotify/tracks`;
+
+    const query = trackIds.map((id) => `trackIds=${id}`).join('&');
+
+    const {
+      data: tracks,
+    }: {
+      data: MediaInfoList[MediaService.Spotify];
+    } = await axios.get(`${url}?${query}`, {
+      withCredentials: true,
+    });
+
+    return tracks;
+  }
+  return {};
 };
 
 export const playSpotifyTrack = async ({

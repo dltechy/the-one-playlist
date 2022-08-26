@@ -1,4 +1,4 @@
-import { DragHandle, Edit } from '@mui/icons-material';
+import { DragHandle, Edit, Shuffle } from '@mui/icons-material';
 import {
   AppBar,
   Box,
@@ -12,6 +12,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Property } from 'csstype';
+import { useRouter } from 'next/router';
 import { FC, useContext, useEffect, useRef, useState } from 'react';
 import {
   DragDropContext,
@@ -38,6 +39,8 @@ export const Playlist: FC = () => {
   const MEDIA_NUMBER_WIDTH = 24;
   const THUMBNAIL_MAX_WIDTH = 96;
   const THUMBNAIL_MAX_HEIGHT = 54;
+
+  const router = useRouter();
 
   const playlistItemIds = useRef<
     {
@@ -108,6 +111,13 @@ export const Playlist: FC = () => {
   }, [isEnabled, mediaIndex]);
 
   // Handlers
+
+  const handleShuffleClick = (): void => {
+    const { shuffle, ...query } = router.query;
+    router.replace({ query });
+
+    playerDispatch({ type: PlayerActionType.ShuffleOn });
+  };
 
   const handlePlaylistDragEnd = (event: DropResult): void => {
     const srcIndex = event.source?.index ?? 0;
@@ -222,14 +232,22 @@ export const Playlist: FC = () => {
               mediaIds.length
             }`}
           </Typography>
-          <IconButton
-            aria-label="Edit playlist"
-            onClick={(): void =>
-              playerDispatch({ type: PlayerActionType.OpenPlaylistManager })
-            }
-          >
-            <Edit />
-          </IconButton>
+          <Stack direction="row" spacing={1}>
+            <IconButton
+              aria-label="Shuffle playlist"
+              onClick={handleShuffleClick}
+            >
+              <Shuffle />
+            </IconButton>
+            <IconButton
+              aria-label="Edit playlist"
+              onClick={(): void =>
+                playerDispatch({ type: PlayerActionType.OpenPlaylistManager })
+              }
+            >
+              <Edit />
+            </IconButton>
+          </Stack>
         </Toolbar>
       </AppBar>
 

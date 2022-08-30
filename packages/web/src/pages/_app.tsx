@@ -5,6 +5,7 @@ import { AppProps } from 'next/app';
 import { FC } from 'react';
 
 import { createEmotionCache } from '@app/lib/emotion/createEmotionCache';
+import { GTag } from '@app/modules/gtag/components/GTag';
 import { theme } from '@app/styles/theme';
 
 // Client-side cache, shared for the whole session of the user in the browser.
@@ -24,6 +25,8 @@ const MyApp: FC<MyAppProps> = (props) => {
   return (
     <CacheProvider value={emotionCache}>
       <ThemeProvider theme={theme}>
+        <GTag />
+
         {/* CssBaseline kickstart an elegant, consistent, and simple baseline to build upon. */}
         <CssBaseline />
         <Component {...pageProps} />

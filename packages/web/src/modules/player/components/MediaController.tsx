@@ -19,6 +19,7 @@ import {
   Slider,
   Stack,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
 import { useRouter } from 'next/router';
 import {
@@ -34,6 +35,7 @@ import {
   getDurationString,
   getProgressString,
 } from '@app/helpers/player/playerTime.helper';
+import { theme } from '@app/styles/theme';
 
 import { PlayerContext, PlayerContextType } from '../contexts/player.context';
 import { PlayerActionType } from '../reducers/player.reducer';
@@ -45,6 +47,9 @@ export const MediaController: FC = () => {
 
   const router = useRouter();
   const prevIsRouterReady = useRef(false);
+
+  const lg = useMediaQuery(theme.breakpoints.up('lg'));
+  const sm = useMediaQuery(theme.breakpoints.up('sm'));
 
   const {
     playerState: {
@@ -195,7 +200,7 @@ export const MediaController: FC = () => {
       alignItems="center"
     >
       <Grid item xs={12}>
-        <Box>
+        <Box display="flex" height={12} alignItems="center">
           <Slider
             aria-label="Seek media"
             min={0}
@@ -224,7 +229,7 @@ export const MediaController: FC = () => {
 
       <Grid item xs={4}>
         <Typography
-          variant="h6"
+          variant={sm ? 'h6' : 'body1'}
           component="span"
           color="#cdcdcd"
           whiteSpace="pre"
@@ -235,24 +240,22 @@ export const MediaController: FC = () => {
           {`${getProgressString({
             duration,
             progress,
-          })} / ${getDurationString({
-            duration,
-          })}`}
+          })}${lg ? `/ ${getDurationString({ duration })}` : ''}`}
         </Typography>
       </Grid>
 
       <Grid item xs={4}>
         <Stack
           direction="row"
-          spacing={2}
+          spacing={sm ? 2 : 1}
           justifyContent="center"
           alignItems="center"
         >
           <Box height="fit-content">
             <Checkbox
               aria-label="Toggle shuffle"
-              icon={<Shuffle />}
-              checkedIcon={<ShuffleOn />}
+              icon={<Shuffle fontSize={sm ? 'medium' : 'small'} />}
+              checkedIcon={<ShuffleOn fontSize={sm ? 'medium' : 'small'} />}
               checked={isShuffleOn}
               onChange={handleToggleShuffleClick}
             />
@@ -264,7 +267,7 @@ export const MediaController: FC = () => {
               playerDispatch({ type: PlayerActionType.PlayPrevious })
             }
           >
-            <SkipPrevious fontSize="large" />
+            <SkipPrevious fontSize={sm ? 'large' : 'medium'} />
           </IconButton>
           <IconButton
             aria-label="Toggle play/pause"
@@ -273,9 +276,9 @@ export const MediaController: FC = () => {
             }
           >
             {isPlaying ? (
-              <Pause fontSize="large" />
+              <Pause fontSize={sm ? 'large' : 'medium'} />
             ) : (
-              <PlayArrow fontSize="large" />
+              <PlayArrow fontSize={sm ? 'large' : 'medium'} />
             )}
           </IconButton>
           <IconButton
@@ -284,14 +287,14 @@ export const MediaController: FC = () => {
               playerDispatch({ type: PlayerActionType.PlayNext })
             }
           >
-            <SkipNext fontSize="large" />
+            <SkipNext fontSize={sm ? 'large' : 'medium'} />
           </IconButton>
 
           <Box height="fit-content">
             <Checkbox
               aria-label="Toggle repeat"
-              icon={<Repeat />}
-              checkedIcon={<RepeatOn />}
+              icon={<Repeat fontSize={sm ? 'medium' : 'small'} />}
+              checkedIcon={<RepeatOn fontSize={sm ? 'medium' : 'small'} />}
               checked={isRepeatOn}
               onChange={handleToggleRepeatClick}
             />
@@ -300,43 +303,59 @@ export const MediaController: FC = () => {
       </Grid>
 
       <Grid item xs={4}>
-        <Stack
-          direction="row"
-          spacing={1}
-          justifyContent="end"
-          alignItems="center"
-        >
-          <IconButton
-            aria-label="Toggle volume mute"
-            onClick={(): void =>
-              playerDispatch({ type: PlayerActionType.ToggleMute })
-            }
+        {lg ? (
+          <Stack
+            direction="row"
+            spacing={1}
+            justifyContent="end"
+            alignItems="center"
           >
-            {renderVolumeIcon()}
-          </IconButton>
-          <Box width={120}>
-            <Slider
-              aria-label="Volume"
-              min={0}
-              max={100}
-              value={isMuted ? 0 : volume}
-              valueLabelDisplay={
-                isMouseOverVolumeSlider || isSettingVolume ? 'on' : 'off'
+            <IconButton
+              aria-label="Toggle volume mute"
+              onClick={(): void =>
+                playerDispatch({ type: PlayerActionType.ToggleMute })
               }
-              components={
-                isMouseOverVolumeSlider || isSettingVolume
-                  ? {}
-                  : {
-                      Thumb: 'div',
-                    }
-              }
-              onMouseEnter={(): void => setIsMouseOverVolumeSlider(true)}
-              onMouseLeave={(): void => setIsMouseOverVolumeSlider(false)}
-              onChange={handleVolumeChange}
-              onChangeCommitted={handleVolumeChangeCommitted}
-            />
+            >
+              {renderVolumeIcon()}
+            </IconButton>
+            <Box width={96}>
+              <Slider
+                aria-label="Volume"
+                min={0}
+                max={100}
+                value={isMuted ? 0 : volume}
+                valueLabelDisplay={
+                  isMouseOverVolumeSlider || isSettingVolume ? 'on' : 'off'
+                }
+                components={
+                  isMouseOverVolumeSlider || isSettingVolume
+                    ? {}
+                    : {
+                        Thumb: 'div',
+                      }
+                }
+                onMouseEnter={(): void => setIsMouseOverVolumeSlider(true)}
+                onMouseLeave={(): void => setIsMouseOverVolumeSlider(false)}
+                onChange={handleVolumeChange}
+                onChangeCommitted={handleVolumeChangeCommitted}
+              />
+            </Box>
+          </Stack>
+        ) : (
+          <Box display="flex" justifyContent="end">
+            <Typography
+              variant={sm ? 'h6' : 'body1'}
+              component="span"
+              color="#cdcdcd"
+              whiteSpace="pre"
+              textTransform="none"
+              textOverflow="ellipsis"
+              overflow="hidden"
+            >
+              {getDurationString({ duration })}
+            </Typography>
           </Box>
-        </Stack>
+        )}
       </Grid>
     </Grid>
   );

@@ -10,6 +10,7 @@ import {
   Toolbar,
   Tooltip,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
 import { Property } from 'csstype';
 import { useRouter } from 'next/router';
@@ -23,6 +24,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 
 import { getDurationString } from '@app/helpers/player/playerTime.helper';
+import { theme } from '@app/styles/theme';
 
 import { PlayerContext, PlayerContextType } from '../contexts/player.context';
 import { PlayerActionType } from '../reducers/player.reducer';
@@ -41,6 +43,8 @@ export const Playlist: FC = () => {
   const THUMBNAIL_MAX_HEIGHT = 54;
 
   const router = useRouter();
+
+  const md = useMediaQuery(theme.breakpoints.up('md'));
 
   const playlistItemIds = useRef<
     {
@@ -103,12 +107,12 @@ export const Playlist: FC = () => {
         const listItemRect = listItem.getBoundingClientRect();
         const listItemHeight = listItemRect.height;
 
-        const centerY = (mediaIndex - 2) * listItemHeight;
+        const centerY = (mediaIndex - (md ? 2 : 0)) * listItemHeight;
 
         listHolder.scrollTo(0, centerY);
       }
     }
-  }, [isEnabled, mediaIndex]);
+  }, [isEnabled, mediaIndex, md]);
 
   // Handlers
 

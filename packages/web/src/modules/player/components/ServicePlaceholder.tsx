@@ -1,6 +1,8 @@
 import { AddCircleOutline, Edit } from '@mui/icons-material';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography, useMediaQuery } from '@mui/material';
 import { FC, useContext } from 'react';
+
+import { theme } from '@app/styles/theme';
 
 import { PlayerContext, PlayerContextType } from '../contexts/player.context';
 import { PlayerActionType } from '../reducers/player.reducer';
@@ -9,6 +11,8 @@ export const ServicePlaceholder: FC = () => {
   // Properties
 
   const { playerDispatch } = useContext(PlayerContext) as PlayerContextType;
+
+  const md = useMediaQuery(theme.breakpoints.up('md'));
 
   // Element
 
@@ -26,20 +30,20 @@ export const ServicePlaceholder: FC = () => {
       }
     >
       <Stack
-        spacing={4}
-        width="50%"
+        spacing={md ? 4 : 0}
+        width="75%"
         margin="auto"
         justifyContent="center"
         alignItems="center"
         textAlign="center"
       >
-        <Box fontSize="3rem" lineHeight={0}>
+        <Box fontSize={md ? '3rem' : '1.5rem'} lineHeight={md ? 0 : 1.5}>
           <AddCircleOutline fontSize="inherit" />
         </Box>
-        <Typography variant="h5" component="span">
+        <Typography variant={md ? 'h5' : 'body1'} component="span">
           No playlists loaded.
         </Typography>
-        <Typography variant="h5" component="span">
+        <Typography variant={md ? 'h5' : 'body1'} component="span">
           Click this box or the edit (
           <Edit
             sx={{

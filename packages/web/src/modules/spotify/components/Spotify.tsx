@@ -1,4 +1,4 @@
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography, useMediaQuery } from '@mui/material';
 import {
   FC,
   useCallback,
@@ -20,6 +20,7 @@ import {
   MediaId,
 } from '@app/modules/player/types/mediaId';
 import { MediaService } from '@app/modules/player/types/mediaService';
+import { theme } from '@app/styles/theme';
 
 import { getPlayer, loadPlayer, playTrack } from '../helpers/spotify.helper';
 
@@ -27,6 +28,8 @@ export const Spotify: FC = () => {
   // Properties
 
   const INVALID_MEDIA_TEXT = 'Unknown';
+
+  const md = useMediaQuery(theme.breakpoints.up('md'));
 
   const [loadedTrackId, setLoadedTrackId] = useState('');
 
@@ -367,7 +370,7 @@ export const Spotify: FC = () => {
         />
 
         <Typography
-          variant="h5"
+          variant={md ? 'h5' : 'body1'}
           component="span"
           lineHeight={1}
           whiteSpace="pre"
@@ -377,7 +380,7 @@ export const Spotify: FC = () => {
           {mediaInfo?.title ?? INVALID_MEDIA_TEXT}
         </Typography>
         <Typography
-          variant="h6"
+          variant={md ? 'h6' : 'body2'}
           component="span"
           lineHeight={1}
           color="text.secondary"

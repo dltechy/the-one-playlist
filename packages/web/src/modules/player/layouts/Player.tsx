@@ -1,9 +1,10 @@
-import { Box, Stack } from '@mui/material';
+import { Box, Stack, useMediaQuery } from '@mui/material';
 import { FC, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
 import { getSpacingPx } from '@app/helpers/theme/spacing.helper';
 import { Spotify } from '@app/modules/spotify/components/Spotify';
 import { YouTube } from '@app/modules/youtube/components/YouTube';
+import { theme } from '@app/styles/theme';
 
 import { MediaController } from '../components/MediaController';
 import { Playlist } from '../components/Playlist';
@@ -24,9 +25,15 @@ export const Player: FC = () => {
 
   const DEFAULT_MARGIN = 4;
 
+  const lg = useMediaQuery(theme.breakpoints.up('lg'));
+  const md = useMediaQuery(theme.breakpoints.up('md'));
+  const sm = useMediaQuery(theme.breakpoints.up('sm'));
+
   const playerRef = useRef<HTMLElement>(null);
   const [playerWidth, setPlayerWidth] = useState(PLAYER_MAX_WIDTH);
   const [playerHeight, setPlayerHeight] = useState(PLAYER_MAX_HEIGHT);
+
+  const mediaControllerRef = useRef<HTMLElement>(null);
 
   const [playerState, playerDispatch] = useReducer(playerReducer, {
     isPlaying: false,
@@ -136,12 +143,18 @@ export const Player: FC = () => {
 
   // Update player size on window resize
   useEffect(() => {
-    updatePlayerSize();
+    const updatePlayerSizeTimeout = (): void => {
+      setTimeout(updatePlayerSize, 100);
+    };
 
-    window.addEventListener('resize', updatePlayerSize);
+    updatePlayerSizeTimeout();
+
+    window.addEventListener('resize', updatePlayerSizeTimeout);
+    window.addEventListener('orientationchange', updatePlayerSizeTimeout);
 
     return () => {
-      window.removeEventListener('resize', updatePlayerSize);
+      window.removeEventListener('resize', updatePlayerSizeTimeout);
+      window.removeEventListener('orientationchange', updatePlayerSizeTimeout);
     };
   }, []);
 
@@ -184,27 +197,44 @@ export const Player: FC = () => {
     <PlayerContext.Provider value={contextState}>
       <Stack
         position="absolute"
-        spacing={2}
-        margin={DEFAULT_MARGIN}
+        spacing={md ? 2 : 1}
+        margin={lg ? DEFAULT_MARGIN : 0}
         alignItems="center"
         sx={{
-          inset: `0 ${PLAYLIST_WIDTH + getSpacingPx(DEFAULT_MARGIN)}px 0 0`,
+          inset: `0 ${
+            sm
+              ? PLAYLIST_WIDTH * (lg ? 1 : 0.75) + getSpacingPx(DEFAULT_MARGIN)
+              : 0
+          }px 0 0`,
         }}
       >
         <Box ref={playerRef} width={playerWidth} height={playerHeight}>
           {renderServices()}
         </Box>
 
-        <Box position="relative" width="100%" maxWidth={PLAYER_MAX_WIDTH}>
+        <Box
+          ref={mediaControllerRef}
+          position="relative"
+          width="100%"
+          maxWidth={PLAYER_MAX_WIDTH}
+        >
           <MediaController />
         </Box>
       </Stack>
 
       <Box
         position="absolute"
-        width={PLAYLIST_WIDTH}
-        margin={DEFAULT_MARGIN}
-        sx={{ inset: '0 0 0 auto' }}
+        width={sm ? PLAYLIST_WIDTH * (lg ? 1 : 0.75) : '100%'}
+        margin={lg ? DEFAULT_MARGIN : 0}
+        sx={{
+          inset: `${
+            sm
+              ? 0
+              : playerHeight +
+                (mediaControllerRef.current?.offsetHeight ?? 0) +
+                getSpacingPx(2)
+          }px 0 0 ${sm ? 'auto' : 0}`,
+        }}
       >
         <Playlist />
       </Box>

@@ -23,6 +23,7 @@ import {
   Theme,
   Tooltip,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
 import cookie from 'cookie';
 import { Property } from 'csstype';
@@ -63,6 +64,7 @@ import {
   getYouTubePlaylistInfo,
 } from '@app/modules/youtube/helpers/youtube.helper';
 import { getYouTubePlaylistVideoIds } from '@app/modules/youtube/helpers/youtubePlaylist.helper';
+import { theme } from '@app/styles/theme';
 
 import { PlayerContext, PlayerContextType } from '../contexts/player.context';
 import { PlayerActionType } from '../reducers/player.reducer';
@@ -83,6 +85,8 @@ export const PlaylistManager: FC = () => {
 
   const router = useRouter();
   const prevIsRouterReady = useRef(false);
+
+  const sm = useMediaQuery(theme.breakpoints.up('sm'));
 
   const inputRef = useRef<HTMLElement>(null);
 
@@ -691,10 +695,11 @@ export const PlaylistManager: FC = () => {
         height="100%"
         sx={{ pointerEvents: 'none' }}
       >
-        <Box display="flex" height="100%" margin="auto">
+        <Box display="flex" width="100%" height="100%" margin="auto">
           <Stack
             spacing={2}
-            width={800}
+            width={sm ? '75%' : '100%'}
+            maxWidth={sm ? 800 : '100%'}
             maxHeight="100%"
             padding={4}
             margin="auto"
@@ -883,6 +888,7 @@ export const PlaylistManager: FC = () => {
                                 draggableSnapshot,
                               ): JSX.Element => (
                                 <ListItemButton
+                                  disableRipple
                                   onMouseEnter={(): void =>
                                     setItemHoverIndex(index)
                                   }
@@ -891,6 +897,7 @@ export const PlaylistManager: FC = () => {
                                   }
                                   ref={draggableProvided.innerRef}
                                   {...draggableProvided.draggableProps}
+                                  {...draggableProvided.dragHandleProps}
                                 >
                                   <Stack width="100%" paddingX={1}>
                                     <Box>
@@ -909,9 +916,7 @@ export const PlaylistManager: FC = () => {
                                       width="100%"
                                       alignItems="center"
                                     >
-                                      <Box
-                                        {...draggableProvided.dragHandleProps}
-                                      >
+                                      <Box>
                                         {!draggableSnapshot.isDragging &&
                                         (isDragging ||
                                           itemHoverIndex !== index) ? (

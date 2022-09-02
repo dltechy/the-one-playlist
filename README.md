@@ -1,6 +1,12 @@
 # The One Playlist
 
-Play media from multiple sources in a single playlist
+Play all your favorite media content from YouTube and Spotify in a single combined playlist.
+
+Platform specific content will now be a thing of the past.
+
+## Visit the site
+
+- [https://www.theoneplaylist.com/](https://www.theoneplaylist.com/)
 
 ## Packages
 

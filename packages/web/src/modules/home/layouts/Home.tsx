@@ -46,7 +46,7 @@ export const Home: FC = () => {
         </Stack>
 
         <Typography variant="h4" component="span" fontWeight="inherit">
-          Listen to media from multiple services in a single playlist!
+          Listen to media from YouTube and Spotify in a single playlist!
         </Typography>
 
         <Link href="/player" passHref>

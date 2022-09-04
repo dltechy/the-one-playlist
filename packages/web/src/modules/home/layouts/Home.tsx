@@ -50,7 +50,7 @@ export const Home: FC = () => {
           >
             <Box
               component="img"
-              src="/assets/home/YouTube Drawing.png"
+              src="/assets/home/youtube-drawing.png"
               alt="Promo"
               width="75%"
               height="75%"
@@ -68,7 +68,7 @@ export const Home: FC = () => {
           >
             <Box
               component="img"
-              src="/assets/home/Spotify Drawing.png"
+              src="/assets/home/spotify-drawing.png"
               alt="Promo"
               width="75%"
               height="75%"

@@ -1,5 +1,6 @@
 import {
   Add,
+  Close,
   Delete,
   DragHandle,
   Info,
@@ -7,6 +8,7 @@ import {
 } from '@mui/icons-material';
 import { LoadingButton } from '@mui/lab';
 import {
+  Alert,
   Box,
   Button,
   IconButton,
@@ -17,6 +19,7 @@ import {
   ListItemText,
   ListSubheader,
   Modal,
+  Snackbar,
   Stack,
   SxProps,
   TextField,
@@ -45,6 +48,7 @@ import {
 } from 'react-beautiful-dnd';
 import { v4 as uuidv4 } from 'uuid';
 
+import { TransitionRight } from '@app/modules/common/components/TransitionRight';
 import {
   getSpotifyAlbumTrackDetails,
   getSpotifyPlaylistTrackDetails,
@@ -95,7 +99,9 @@ export const PlaylistManager: FC = () => {
 
   const [isLoadingMedia, setIsLoadingMedia] = useState(true);
 
-  const [spotifyRefreshToken, setSpotifyRefreshToken] = useState<string>('');
+  const [spotifyRefreshToken, setSpotifyRefreshToken] = useState('');
+
+  const [errorSnackbarMessage, setErrorSnackbarMessage] = useState('');
 
   const {
     playerState: { playlistInfoList, mediaInfoList, isPlaylistManagerOpen },
@@ -304,9 +310,18 @@ export const PlaylistManager: FC = () => {
                   break;
                 }
                 case MediaService.Spotify: {
-                  ({ playlistInfo, mediaInfo } = await getSpotifyPlaylistInfo(
-                    basePlaylistInfo,
-                  ));
+                  const cookies = cookie.parse(document.cookie);
+                  const refreshToken = cookies.spotifyRefreshToken;
+
+                  if (refreshToken) {
+                    ({ playlistInfo, mediaInfo } = await getSpotifyPlaylistInfo(
+                      basePlaylistInfo,
+                    ));
+                  } else {
+                    setErrorSnackbarMessage(
+                      'Unable to load items from Spotify. Please login to Spotify and try again.',
+                    );
+                  }
                   break;
                 }
                 default: {
@@ -372,7 +387,9 @@ export const PlaylistManager: FC = () => {
         }
       };
       loadPlaylists()
-        .catch()
+        .catch((): void =>
+          setErrorSnackbarMessage('Unable to load playlist. Please try again.'),
+        )
         .finally(() => {
           setIsLoadingMedia(false);
         });
@@ -433,9 +450,16 @@ export const PlaylistManager: FC = () => {
         if (basePlaylistInfo == null) {
           basePlaylistInfo = getBaseSpotifyPlaylistInfo(playlistLink);
           if (basePlaylistInfo != null) {
-            ({ playlistInfo, mediaInfo } = await getSpotifyPlaylistInfo(
-              basePlaylistInfo,
-            ));
+            const cookies = cookie.parse(document.cookie);
+            const refreshToken = cookies.spotifyRefreshToken;
+
+            if (refreshToken) {
+              ({ playlistInfo, mediaInfo } = await getSpotifyPlaylistInfo(
+                basePlaylistInfo,
+              ));
+            } else {
+              playlistError = 'Not logged in to Spotify';
+            }
           }
         }
 
@@ -502,7 +526,11 @@ export const PlaylistManager: FC = () => {
       }
     };
     loadPlaylist()
-      .catch()
+      .catch((): void =>
+        setErrorSnackbarMessage(
+          'Error loading selected playlist. Please try again.',
+        ),
+      )
       .finally(() => {
         setIsLoadingMedia(false);
       });
@@ -554,15 +582,24 @@ export const PlaylistManager: FC = () => {
             default: {
               switch (service) {
                 case MediaService.Spotify: {
-                  const tracks = await loadSpotify(playlistInfo);
+                  const cookies = cookie.parse(document.cookie);
+                  const refreshToken = cookies.spotifyRefreshToken;
 
-                  Object.keys(tracks).forEach((trackId) => {
-                    if (type === PlaylistType.Album) {
-                      tracks[trackId].thumbnail = { ...thumbnail };
-                    }
+                  if (refreshToken) {
+                    const tracks = await loadSpotify(playlistInfo);
 
-                    newMediaInfoList[service][trackId] = tracks[trackId];
-                  });
+                    Object.keys(tracks).forEach((trackId) => {
+                      if (type === PlaylistType.Album) {
+                        tracks[trackId].thumbnail = { ...thumbnail };
+                      }
+
+                      newMediaInfoList[service][trackId] = tracks[trackId];
+                    });
+                  } else {
+                    setErrorSnackbarMessage(
+                      'Unable to load items from Spotify. Please login to Spotify and try again.',
+                    );
+                  }
                   break;
                 }
                 default: {
@@ -611,6 +648,8 @@ export const PlaylistManager: FC = () => {
       playerDispatch({ type: PlayerActionType.Play });
 
       playerDispatch({ type: PlayerActionType.ClosePlaylistManager });
+    } catch {
+      setErrorSnackbarMessage('Unable to save playlist. Please try again.');
     } finally {
       setIsLoadingMedia(false);
     }
@@ -688,391 +727,423 @@ export const PlaylistManager: FC = () => {
   };
 
   return (
-    <Modal open={isPlaylistManagerOpen} onClose={(): void => handleClose()}>
-      <Box
-        display="flex"
-        width="100%"
-        height="100%"
-        sx={{ pointerEvents: 'none' }}
-      >
-        <Box display="flex" width="100%" height="100%" margin="auto">
-          <Stack
-            spacing={2}
-            width={sm ? '75%' : '100%'}
-            maxWidth={sm ? 800 : '100%'}
-            maxHeight="100%"
-            padding={4}
-            margin="auto"
-            bgcolor="background.paper"
-            sx={{ pointerEvents: 'auto' }}
-          >
-            <Stack direction="row" spacing={1}>
-              <Box
-                component="form"
-                flexGrow={1}
-                onSubmit={handleLoadPlaylistClick}
-              >
-                <TextField
-                  label="Playlist link"
-                  variant="outlined"
-                  fullWidth
-                  value={playlistLink}
-                  error={playlistLinkError !== ''}
-                  helperText={playlistLinkError}
-                  disabled={isLoadingMedia}
-                  inputRef={inputRef}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          type="submit"
-                          aria-label="Load playlist"
-                          disabled={isLoadingMedia}
+    <>
+      <Modal open={isPlaylistManagerOpen} onClose={(): void => handleClose()}>
+        <Box
+          display="flex"
+          width="100%"
+          height="100%"
+          sx={{ pointerEvents: 'none' }}
+        >
+          <Box display="flex" width="100%" height="100%" margin="auto">
+            <Stack
+              spacing={2}
+              width={sm ? '75%' : '100%'}
+              maxWidth={sm ? 800 : '100%'}
+              maxHeight="100%"
+              padding={4}
+              margin="auto"
+              bgcolor="background.paper"
+              sx={{ pointerEvents: 'auto' }}
+            >
+              <Stack direction="row" spacing={1}>
+                <Box
+                  component="form"
+                  flexGrow={1}
+                  onSubmit={handleLoadPlaylistClick}
+                >
+                  <TextField
+                    label="Playlist link"
+                    variant="outlined"
+                    fullWidth
+                    value={playlistLink}
+                    error={playlistLinkError !== ''}
+                    helperText={playlistLinkError}
+                    disabled={isLoadingMedia}
+                    inputRef={inputRef}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            type="submit"
+                            aria-label="Load playlist"
+                            disabled={isLoadingMedia}
+                          >
+                            <Add />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    onChange={(event): void =>
+                      setPlaylistLink(event.target.value.trim())
+                    }
+                  />
+                </Box>
+
+                <Box height="fit-content" paddingTop={0.25}>
+                  <IconButton
+                    onClick={(): void => setIsShowingInfo((prev) => !prev)}
+                  >
+                    {isShowingInfo ? (
+                      <Info fontSize="large" />
+                    ) : (
+                      <InfoOutlined fontSize="large" />
+                    )}
+                  </IconButton>
+                </Box>
+              </Stack>
+
+              <Box display="flex" width="100%" justifyContent="center">
+                {spotifyRefreshToken == null ? (
+                  <Button
+                    variant="contained"
+                    onClick={(): Promise<void> => spotifyLogin().catch()}
+                  >
+                    Login with Spotify
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outlined"
+                    onClick={(): Promise<void> => spotifyLogout().catch()}
+                  >
+                    Logout from Spotify
+                  </Button>
+                )}
+              </Box>
+
+              {isShowingInfo ? (
+                <Box>
+                  <List sx={compactListStyle}>
+                    <ListSubheader>
+                      <ListItemText>Supported services:</ListItemText>
+                    </ListSubheader>
+                    <ListItem sx={compactListStyle}>
+                      <List sx={compactListStyle}>
+                        <ListItem
+                          sx={{
+                            ...discListStyle,
+                            marginLeft: 4,
+                          }}
                         >
-                          <Add />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  onChange={(event): void =>
-                    setPlaylistLink(event.target.value.trim())
-                  }
-                />
-              </Box>
+                          <ListItemText>YouTube</ListItemText>
+                        </ListItem>
+                        <ListItem sx={compactListStyle}>
+                          <List sx={compactListStyle}>
+                            <ListItem
+                              sx={{
+                                ...circleListStyle,
+                                marginLeft: 8,
+                              }}
+                            >
+                              <ListItemText>Playlist</ListItemText>
+                            </ListItem>
+                            <ListItem
+                              sx={{
+                                ...circleListStyle,
+                                marginLeft: 8,
+                              }}
+                            >
+                              <ListItemText>Video</ListItemText>
+                            </ListItem>
+                          </List>
+                        </ListItem>
 
-              <Box height="fit-content" paddingTop={0.25}>
-                <IconButton
-                  onClick={(): void => setIsShowingInfo((prev) => !prev)}
+                        <ListItem
+                          sx={{
+                            ...discListStyle,
+                            marginLeft: 4,
+                          }}
+                        >
+                          <ListItemText>Spotify (login required)</ListItemText>
+                        </ListItem>
+                        <ListItem sx={compactListStyle}>
+                          <List sx={compactListStyle}>
+                            <ListItem
+                              sx={{
+                                ...circleListStyle,
+                                marginLeft: 8,
+                              }}
+                            >
+                              <ListItemText>Playlist</ListItemText>
+                            </ListItem>
+                            <ListItem
+                              sx={{
+                                ...circleListStyle,
+                                marginLeft: 8,
+                              }}
+                            >
+                              <ListItemText>Album</ListItemText>
+                            </ListItem>
+                            <ListItem
+                              sx={{
+                                ...circleListStyle,
+                                marginLeft: 8,
+                              }}
+                            >
+                              <ListItemText>Track</ListItemText>
+                            </ListItem>
+                          </List>
+                        </ListItem>
+                      </List>
+                    </ListItem>
+                  </List>
+                </Box>
+              ) : null}
+
+              <Box maxHeight={576} overflow="auto">
+                <DragDropContext
+                  onDragStart={(): void => setIsDragging(true)}
+                  onDragEnd={handlePlaylistDragEnd}
                 >
-                  {isShowingInfo ? (
-                    <Info fontSize="large" />
-                  ) : (
-                    <InfoOutlined fontSize="large" />
-                  )}
-                </IconButton>
-              </Box>
-            </Stack>
-
-            <Box display="flex" width="100%" justifyContent="center">
-              {spotifyRefreshToken == null ? (
-                <Button
-                  variant="contained"
-                  onClick={(): Promise<void> => spotifyLogin().catch()}
-                >
-                  Login with Spotify
-                </Button>
-              ) : (
-                <Button
-                  variant="outlined"
-                  onClick={(): Promise<void> => spotifyLogout().catch()}
-                >
-                  Logout from Spotify
-                </Button>
-              )}
-            </Box>
-
-            {isShowingInfo ? (
-              <Box>
-                <List sx={compactListStyle}>
-                  <ListSubheader>
-                    <ListItemText>Supported services:</ListItemText>
-                  </ListSubheader>
-                  <ListItem sx={compactListStyle}>
-                    <List sx={compactListStyle}>
-                      <ListItem
-                        sx={{
-                          ...discListStyle,
-                          marginLeft: 4,
-                        }}
-                      >
-                        <ListItemText>YouTube</ListItemText>
-                      </ListItem>
-                      <ListItem sx={compactListStyle}>
-                        <List sx={compactListStyle}>
-                          <ListItem
-                            sx={{
-                              ...circleListStyle,
-                              marginLeft: 8,
-                            }}
-                          >
-                            <ListItemText>Playlist</ListItemText>
-                          </ListItem>
-                          <ListItem
-                            sx={{
-                              ...circleListStyle,
-                              marginLeft: 8,
-                            }}
-                          >
-                            <ListItemText>Video</ListItemText>
-                          </ListItem>
-                        </List>
-                      </ListItem>
-
-                      <ListItem
-                        sx={{
-                          ...discListStyle,
-                          marginLeft: 4,
-                        }}
-                      >
-                        <ListItemText>Spotify (login required)</ListItemText>
-                      </ListItem>
-                      <ListItem sx={compactListStyle}>
-                        <List sx={compactListStyle}>
-                          <ListItem
-                            sx={{
-                              ...circleListStyle,
-                              marginLeft: 8,
-                            }}
-                          >
-                            <ListItemText>Playlist</ListItemText>
-                          </ListItem>
-                          <ListItem
-                            sx={{
-                              ...circleListStyle,
-                              marginLeft: 8,
-                            }}
-                          >
-                            <ListItemText>Album</ListItemText>
-                          </ListItem>
-                          <ListItem
-                            sx={{
-                              ...circleListStyle,
-                              marginLeft: 8,
-                            }}
-                          >
-                            <ListItemText>Track</ListItemText>
-                          </ListItem>
-                        </List>
-                      </ListItem>
-                    </List>
-                  </ListItem>
-                </List>
-              </Box>
-            ) : null}
-
-            <Box maxHeight={576} overflow="auto">
-              <DragDropContext
-                onDragStart={(): void => setIsDragging(true)}
-                onDragEnd={handlePlaylistDragEnd}
-              >
-                {isEnabled ? (
-                  <Droppable droppableId="playlist-manager-droppable">
-                    {(droppableProvided): JSX.Element => (
-                      <List
-                        ref={droppableProvided.innerRef}
-                        {...droppableProvided.droppableProps}
-                      >
-                        {tempPlaylistInfoList.map((playlistInfo, index) => (
-                          <ListItem
-                            key={
-                              playlistManagerItemIds.current[index]?.itemId ??
-                              uuidv4()
-                            }
-                            disablePadding
-                            divider={
-                              (isDragging && index > 0) ||
-                              (!isDragging &&
-                                index < tempPlaylistInfoList.length - 1)
-                            }
-                          >
-                            <Draggable
-                              draggableId={
+                  {isEnabled ? (
+                    <Droppable droppableId="playlist-manager-droppable">
+                      {(droppableProvided): JSX.Element => (
+                        <List
+                          ref={droppableProvided.innerRef}
+                          {...droppableProvided.droppableProps}
+                        >
+                          {tempPlaylistInfoList.map((playlistInfo, index) => (
+                            <ListItem
+                              key={
                                 playlistManagerItemIds.current[index]?.itemId ??
                                 uuidv4()
                               }
-                              index={index}
-                              disableInteractiveElementBlocking
+                              disablePadding
+                              divider={
+                                (isDragging && index > 0) ||
+                                (!isDragging &&
+                                  index < tempPlaylistInfoList.length - 1)
+                              }
                             >
-                              {(
-                                draggableProvided,
-                                draggableSnapshot,
-                              ): JSX.Element => (
-                                <ListItemButton
-                                  disableRipple
-                                  onMouseEnter={(): void =>
-                                    setItemHoverIndex(index)
-                                  }
-                                  onMouseLeave={(): void =>
-                                    setItemHoverIndex(-1)
-                                  }
-                                  ref={draggableProvided.innerRef}
-                                  {...draggableProvided.draggableProps}
-                                  {...draggableProvided.dragHandleProps}
-                                >
-                                  <Stack width="100%" paddingX={1}>
-                                    <Box>
-                                      <Typography
-                                        variant="body2"
-                                        component="p"
-                                        color="text.secondary"
-                                      >
-                                        {`${playlistInfo.service} - ${playlistInfo.type}`}
-                                      </Typography>
-                                    </Box>
-
-                                    <Stack
-                                      direction="row"
-                                      spacing={1}
-                                      width="100%"
-                                      alignItems="center"
-                                    >
+                              <Draggable
+                                draggableId={
+                                  playlistManagerItemIds.current[index]
+                                    ?.itemId ?? uuidv4()
+                                }
+                                index={index}
+                                disableInteractiveElementBlocking
+                              >
+                                {(
+                                  draggableProvided,
+                                  draggableSnapshot,
+                                ): JSX.Element => (
+                                  <ListItemButton
+                                    disableRipple
+                                    onMouseEnter={(): void =>
+                                      setItemHoverIndex(index)
+                                    }
+                                    onMouseLeave={(): void =>
+                                      setItemHoverIndex(-1)
+                                    }
+                                    ref={draggableProvided.innerRef}
+                                    {...draggableProvided.draggableProps}
+                                    {...draggableProvided.dragHandleProps}
+                                  >
+                                    <Stack width="100%" paddingX={1}>
                                       <Box>
-                                        {!draggableSnapshot.isDragging &&
-                                        (isDragging ||
-                                          itemHoverIndex !== index) ? (
-                                          <Typography
-                                            variant="body2"
-                                            component="p"
-                                            width={MEDIA_NUMBER_WIDTH}
-                                            textAlign="center"
-                                            color="text.secondary"
-                                          >
-                                            {index + 1}
-                                          </Typography>
-                                        ) : (
-                                          <Box
-                                            width={MEDIA_NUMBER_WIDTH}
-                                            lineHeight={0}
-                                            textAlign="center"
-                                            color="text.secondary"
-                                          >
-                                            <DragHandle />
-                                          </Box>
-                                        )}
+                                        <Typography
+                                          variant="body2"
+                                          component="p"
+                                          color="text.secondary"
+                                        >
+                                          {`${playlistInfo.service} - ${playlistInfo.type}`}
+                                        </Typography>
                                       </Box>
 
-                                      {renderThumbnail(playlistInfo)}
-
                                       <Stack
+                                        direction="row"
+                                        spacing={1}
                                         width="100%"
-                                        justifyContent="center"
+                                        alignItems="center"
                                       >
-                                        <Tooltip
-                                          title={playlistInfo.title}
-                                          placement="bottom-start"
-                                          open={
-                                            textHoverId ===
-                                              playlistManagerItemIds.current[
-                                                index
-                                              ]?.titleElementId ?? uuidv4()
-                                          }
+                                        <Box>
+                                          {!draggableSnapshot.isDragging &&
+                                          (isDragging ||
+                                            itemHoverIndex !== index) ? (
+                                            <Typography
+                                              variant="body2"
+                                              component="p"
+                                              width={MEDIA_NUMBER_WIDTH}
+                                              textAlign="center"
+                                              color="text.secondary"
+                                            >
+                                              {index + 1}
+                                            </Typography>
+                                          ) : (
+                                            <Box
+                                              width={MEDIA_NUMBER_WIDTH}
+                                              lineHeight={0}
+                                              textAlign="center"
+                                              color="text.secondary"
+                                            >
+                                              <DragHandle />
+                                            </Box>
+                                          )}
+                                        </Box>
+
+                                        {renderThumbnail(playlistInfo)}
+
+                                        <Stack
+                                          width="100%"
+                                          justifyContent="center"
                                         >
-                                          <Typography
-                                            variant="body1"
-                                            component="span"
-                                            display="-webkit-box"
-                                            height={48}
-                                            marginBottom={1}
-                                            overflow="hidden"
-                                            sx={{
-                                              WebkitBoxOrient: 'vertical',
-                                              WebkitLineClamp: 2,
-                                            }}
-                                            onMouseEnter={(): void =>
-                                              setTextHoverId(
+                                          <Tooltip
+                                            title={playlistInfo.title}
+                                            placement="bottom-start"
+                                            open={
+                                              textHoverId ===
                                                 playlistManagerItemIds.current[
                                                   index
-                                                ]?.titleElementId ?? uuidv4(),
-                                              )
-                                            }
-                                            onMouseLeave={(): void =>
-                                              setTextHoverId('')
+                                                ]?.titleElementId ?? uuidv4()
                                             }
                                           >
-                                            {playlistInfo.title}
-                                          </Typography>
-                                        </Tooltip>
-                                        <Tooltip
-                                          title={`${playlistInfo.itemCount} item(s)`}
-                                          placement="bottom-start"
-                                          open={
-                                            textHoverId ===
-                                              playlistManagerItemIds.current[
-                                                index
-                                              ]?.itemsElementId ?? uuidv4()
-                                          }
-                                        >
-                                          <Typography
-                                            variant="body2"
-                                            component="p"
-                                            display="-webkit-box"
-                                            overflow="hidden"
-                                            color="text.secondary"
-                                            sx={{
-                                              WebkitBoxOrient: 'vertical',
-                                              WebkitLineClamp: 1,
-                                            }}
-                                            onMouseEnter={(): void =>
-                                              setTextHoverId(
+                                            <Typography
+                                              variant="body1"
+                                              component="span"
+                                              display="-webkit-box"
+                                              height={48}
+                                              marginBottom={1}
+                                              overflow="hidden"
+                                              sx={{
+                                                WebkitBoxOrient: 'vertical',
+                                                WebkitLineClamp: 2,
+                                              }}
+                                              onMouseEnter={(): void =>
+                                                setTextHoverId(
+                                                  playlistManagerItemIds
+                                                    .current[index]
+                                                    ?.titleElementId ??
+                                                    uuidv4(),
+                                                )
+                                              }
+                                              onMouseLeave={(): void =>
+                                                setTextHoverId('')
+                                              }
+                                            >
+                                              {playlistInfo.title}
+                                            </Typography>
+                                          </Tooltip>
+                                          <Tooltip
+                                            title={`${playlistInfo.itemCount} item(s)`}
+                                            placement="bottom-start"
+                                            open={
+                                              textHoverId ===
                                                 playlistManagerItemIds.current[
                                                   index
-                                                ]?.itemsElementId ?? uuidv4(),
-                                              )
-                                            }
-                                            onMouseLeave={(): void =>
-                                              setTextHoverId('')
+                                                ]?.itemsElementId ?? uuidv4()
                                             }
                                           >
-                                            {`${playlistInfo.itemCount} item(s)`}
-                                          </Typography>
-                                        </Tooltip>
+                                            <Typography
+                                              variant="body2"
+                                              component="p"
+                                              display="-webkit-box"
+                                              overflow="hidden"
+                                              color="text.secondary"
+                                              sx={{
+                                                WebkitBoxOrient: 'vertical',
+                                                WebkitLineClamp: 1,
+                                              }}
+                                              onMouseEnter={(): void =>
+                                                setTextHoverId(
+                                                  playlistManagerItemIds
+                                                    .current[index]
+                                                    ?.itemsElementId ??
+                                                    uuidv4(),
+                                                )
+                                              }
+                                              onMouseLeave={(): void =>
+                                                setTextHoverId('')
+                                              }
+                                            >
+                                              {`${playlistInfo.itemCount} item(s)`}
+                                            </Typography>
+                                          </Tooltip>
+                                        </Stack>
+                                        <IconButton
+                                          onClick={(): void =>
+                                            setTempPlaylistInfoList((prev) => {
+                                              const newTempPlaylistInfoList = [
+                                                ...prev,
+                                              ];
+                                              newTempPlaylistInfoList.splice(
+                                                index,
+                                                1,
+                                              );
+
+                                              return newTempPlaylistInfoList;
+                                            })
+                                          }
+                                        >
+                                          <Delete />
+                                        </IconButton>
                                       </Stack>
-                                      <IconButton
-                                        onClick={(): void =>
-                                          setTempPlaylistInfoList((prev) => {
-                                            const newTempPlaylistInfoList = [
-                                              ...prev,
-                                            ];
-                                            newTempPlaylistInfoList.splice(
-                                              index,
-                                              1,
-                                            );
-
-                                            return newTempPlaylistInfoList;
-                                          })
-                                        }
-                                      >
-                                        <Delete />
-                                      </IconButton>
                                     </Stack>
-                                  </Stack>
-                                </ListItemButton>
-                              )}
-                            </Draggable>
-                          </ListItem>
-                        ))}
-                        {droppableProvided.placeholder}
-                      </List>
-                    )}
-                  </Droppable>
-                ) : null}
-              </DragDropContext>
-            </Box>
+                                  </ListItemButton>
+                                )}
+                              </Draggable>
+                            </ListItem>
+                          ))}
+                          {droppableProvided.placeholder}
+                        </List>
+                      )}
+                    </Droppable>
+                  ) : null}
+                </DragDropContext>
+              </Box>
 
-            <Stack direction="row-reverse" spacing={1}>
-              <Box width={96}>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  onClick={(): void => handleClose()}
-                >
-                  Cancel
-                </Button>
-              </Box>
-              <Box width={96}>
-                <LoadingButton
-                  variant="contained"
-                  fullWidth
-                  loading={isLoadingMedia}
-                  onClick={(): Promise<void> => handleSave().catch()}
-                >
-                  Save
-                </LoadingButton>
-              </Box>
+              <Stack direction="row-reverse" spacing={1}>
+                <Box width={96}>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    onClick={(): void => handleClose()}
+                  >
+                    Cancel
+                  </Button>
+                </Box>
+                <Box width={96}>
+                  <LoadingButton
+                    variant="contained"
+                    fullWidth
+                    loading={isLoadingMedia}
+                    onClick={(): Promise<void> => handleSave()}
+                  >
+                    Save
+                  </LoadingButton>
+                </Box>
+              </Stack>
             </Stack>
-          </Stack>
+          </Box>
         </Box>
-      </Box>
-    </Modal>
+      </Modal>
+
+      <Snackbar
+        open={errorSnackbarMessage !== ''}
+        autoHideDuration={6000}
+        onClose={(): void => setErrorSnackbarMessage('')}
+        TransitionComponent={TransitionRight}
+      >
+        <Alert
+          severity="error"
+          variant="filled"
+          action={
+            <IconButton
+              aria-label="close"
+              size="small"
+              color="inherit"
+              sx={{ marginTop: -1 }}
+              onClick={(): void => setErrorSnackbarMessage('')}
+            >
+              <Close fontSize="small" />
+            </IconButton>
+          }
+          sx={{
+            alignItems: 'center',
+          }}
+        >
+          {errorSnackbarMessage}
+        </Alert>
+      </Snackbar>
+    </>
   );
 };

@@ -1,7 +1,9 @@
 import { HttpException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Request, Response } from 'express';
 
+import { SpotifyConfig } from '@app/config/spotify.config';
 import { createRethrowUnknownErrorAsyncTest } from '@app/helpers/__tests__/errors/error-tests.helper';
 import { getConfigImport } from '@app/helpers/__tests__/imports/config-imports.helper';
 import { axiosMock } from '@app/helpers/__tests__/mocks/axios.mocks';
@@ -17,6 +19,8 @@ describe('SpotifyService', () => {
   // Properties & methods
 
   let service: SpotifyService;
+
+  let configService: ConfigService;
 
   const [spotifySample1, spotifySample2, spotifySample3] = spotifySamples;
 
@@ -38,6 +42,8 @@ describe('SpotifyService', () => {
 
     service = module.get(SpotifyService);
 
+    configService = module.get(ConfigService);
+
     return module;
   };
 
@@ -58,33 +64,122 @@ describe('SpotifyService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('setKeys', () => {
+    it('should set client ID cookie', async () => {
+      service.setKeys({
+        clientId: spotifySample1.clientId,
+        clientSecret: spotifySample1.clientSecret,
+        res: resMock as {} as Response,
+      });
+
+      expect(resMock.cookie).toHaveBeenNthCalledWith(
+        1,
+        'spotifyClientId',
+        spotifySample1.clientId,
+      );
+    });
+
+    it('should set client secret cookie', async () => {
+      service.setKeys({
+        clientId: spotifySample1.clientId,
+        clientSecret: spotifySample1.clientSecret,
+        res: resMock as {} as Response,
+      });
+
+      expect(resMock.cookie).toHaveBeenNthCalledWith(
+        2,
+        'spotifyClientSecret',
+        spotifySample1.clientSecret,
+      );
+    });
+
+    it('should remove client ID cookie if user sent empty values', async () => {
+      service.setKeys({
+        clientId: '',
+        clientSecret: '',
+        res: resMock as {} as Response,
+      });
+
+      expect(resMock.clearCookie).toHaveBeenCalledWith('spotifyClientId');
+    });
+
+    it('should remove client secret cookie if user sent empty values', async () => {
+      service.setKeys({
+        clientId: '',
+        clientSecret: '',
+        res: resMock as {} as Response,
+      });
+
+      expect(resMock.clearCookie).toHaveBeenCalledWith('spotifyClientSecret');
+    });
+  });
+
   describe('login', () => {
+    beforeEach(() => {
+      reqMock.cookies = {};
+    });
+
+    it('should use default client ID if custom does not exist', () => {
+      const authQueryParameters = service.login({
+        req: reqMock as {} as Request,
+      });
+
+      const { clientId } = configService.get<SpotifyConfig>('spotify');
+
+      expect(authQueryParameters).toMatch(new RegExp(`client_id=${clientId}`));
+    });
+
+    it('should use custom client ID if it exists', () => {
+      reqMock.cookies = {
+        spotifyClientId: spotifySample1.clientId,
+        spotifyClientSecret: spotifySample1.clientSecret,
+      };
+
+      const authQueryParameters = service.login({
+        req: reqMock as {} as Request,
+      });
+
+      expect(authQueryParameters).toMatch(
+        new RegExp(`client_id=${spotifySample1.clientId}`),
+      );
+    });
+
     it('should include response_type in output', () => {
-      const authQueryParameters = service.login();
+      const authQueryParameters = service.login({
+        req: reqMock as {} as Request,
+      });
 
       expect(authQueryParameters).toMatch(/(^|[^&]*)response_type=code(&|$)/);
     });
 
     it('should include client_id in output', () => {
-      const authQueryParameters = service.login();
+      const authQueryParameters = service.login({
+        req: reqMock as {} as Request,
+      });
 
       expect(authQueryParameters).toMatch(/(^|[^&]*)client_id=[^&]+(&|$)/);
     });
 
     it('should include scope in output', () => {
-      const authQueryParameters = service.login();
+      const authQueryParameters = service.login({
+        req: reqMock as {} as Request,
+      });
 
       expect(authQueryParameters).toMatch(/(^|[^&]*)scope=[^&]+(&|$)/);
     });
 
     it('should include redirect_uri in output', () => {
-      const authQueryParameters = service.login();
+      const authQueryParameters = service.login({
+        req: reqMock as {} as Request,
+      });
 
       expect(authQueryParameters).toMatch(/(^|[^&]*)redirect_uri=[^&]+(&|$)/);
     });
 
     it('should include state in output', () => {
-      const authQueryParameters = service.login();
+      const authQueryParameters = service.login({
+        req: reqMock as {} as Request,
+      });
 
       expect(authQueryParameters).toMatch(/(^|[^&]*)state=[^&]+(&|$)/);
     });
@@ -92,7 +187,67 @@ describe('SpotifyService', () => {
 
   describe('loginCallback', () => {
     beforeEach(() => {
+      reqMock.cookies = {};
       qsMock.stringify.mockReturnValue('');
+    });
+
+    it('should use default client ID and secret if custom does not exist', () => {
+      axiosMock.post.mockResolvedValue({
+        status: 200,
+        data: spotifySample1.spotifyTokens,
+      });
+
+      service.loginCallback({
+        code: spotifySample1.code,
+        req: reqMock as {} as Request,
+        res: resMock as {} as Response,
+      });
+
+      const { clientId, clientSecret } =
+        configService.get<SpotifyConfig>('spotify');
+
+      expect(axiosMock.post).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            Authorization: `Basic ${Buffer.from(
+              `${clientId}:${clientSecret}`,
+            ).toString('base64')}`,
+          }),
+        }),
+      );
+    });
+
+    it('should use custom client ID and secret if it exists', () => {
+      reqMock.cookies = {
+        spotifyClientId: spotifySample1.clientId,
+        spotifyClientSecret: spotifySample1.clientSecret,
+      };
+      axiosMock.post.mockResolvedValue({
+        status: 200,
+        data: spotifySample1.spotifyTokens,
+      });
+
+      service.loginCallback({
+        code: spotifySample1.code,
+        req: reqMock as {} as Request,
+        res: resMock as {} as Response,
+      });
+
+      expect(axiosMock.post).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            Authorization: `Basic ${Buffer.from(
+              `${spotifySample1.clientId}:${spotifySample1.clientSecret}`,
+            ).toString('base64')}`,
+          }),
+        }),
+      );
     });
 
     it('should set access token cookie with expiry', async () => {
@@ -103,6 +258,7 @@ describe('SpotifyService', () => {
 
       await service.loginCallback({
         code: spotifySample1.code,
+        req: reqMock as {} as Request,
         res: resMock as {} as Response,
       });
 
@@ -122,6 +278,7 @@ describe('SpotifyService', () => {
 
       await service.loginCallback({
         code: spotifySample1.code,
+        req: reqMock as {} as Request,
         res: resMock as {} as Response,
       });
 
@@ -140,6 +297,7 @@ describe('SpotifyService', () => {
 
       const output = await service.loginCallback({
         code: spotifySample1.code,
+        req: reqMock as {} as Request,
         res: resMock as {} as Response,
       });
 
@@ -155,6 +313,7 @@ describe('SpotifyService', () => {
       await expect(
         service.loginCallback({
           code: spotifySample1.code,
+          req: reqMock as {} as Request,
           res: resMock as {} as Response,
         }),
       ).rejects.toBeInstanceOf(HttpException);
@@ -166,6 +325,7 @@ describe('SpotifyService', () => {
       await expect(
         service.loginCallback({
           code: spotifySample1.code,
+          req: reqMock as {} as Request,
           res: resMock as {} as Response,
         }),
       ).rejects.toBeInstanceOf(HttpException);
@@ -177,6 +337,7 @@ describe('SpotifyService', () => {
       try {
         await service.loginCallback({
           code: spotifySample1.code,
+          req: reqMock as {} as Request,
           res: resMock as {} as Response,
         });
       } catch {
@@ -192,6 +353,7 @@ describe('SpotifyService', () => {
       try {
         await service.loginCallback({
           code: spotifySample1.code,
+          req: reqMock as {} as Request,
           res: resMock as {} as Response,
         });
       } catch {
@@ -207,6 +369,7 @@ describe('SpotifyService', () => {
       try {
         await service.loginCallback({
           code: spotifySample1.code,
+          req: reqMock as {} as Request,
           res: resMock as {} as Response,
         });
       } catch {
@@ -222,6 +385,7 @@ describe('SpotifyService', () => {
       try {
         await service.loginCallback({
           code: spotifySample1.code,
+          req: reqMock as {} as Request,
           res: resMock as {} as Response,
         });
       } catch {
@@ -237,6 +401,7 @@ describe('SpotifyService', () => {
       testedPromiseGetter: () =>
         service.loginCallback({
           code: spotifySample1.code,
+          req: reqMock as {} as Request,
           res: resMock as {} as Response,
         }),
     });
@@ -244,7 +409,69 @@ describe('SpotifyService', () => {
 
   describe('token', () => {
     beforeEach(() => {
+      reqMock.cookies = {};
       qsMock.stringify.mockReturnValue('');
+    });
+
+    it('should use default client ID and secret if custom does not exist', async () => {
+      reqMock.cookies = {
+        spotifyRefreshToken: spotifySample1.tokens.refreshToken,
+      };
+      axiosMock.post.mockResolvedValue({
+        status: 200,
+        data: spotifySample2.spotifyTokens,
+      });
+
+      await service.token({
+        req: reqMock as {} as Request,
+        res: resMock as {} as Response,
+      });
+
+      const { clientId, clientSecret } =
+        configService.get<SpotifyConfig>('spotify');
+
+      expect(axiosMock.post).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            Authorization: `Basic ${Buffer.from(
+              `${clientId}:${clientSecret}`,
+            ).toString('base64')}`,
+          }),
+        }),
+      );
+    });
+
+    it('should use custom client ID and secret if it exists', async () => {
+      reqMock.cookies = {
+        spotifyClientId: spotifySample1.clientId,
+        spotifyClientSecret: spotifySample1.clientSecret,
+        spotifyRefreshToken: spotifySample1.tokens.refreshToken,
+      };
+      axiosMock.post.mockResolvedValue({
+        status: 200,
+        data: spotifySample2.spotifyTokens,
+      });
+
+      await service.token({
+        req: reqMock as {} as Request,
+        res: resMock as {} as Response,
+      });
+
+      expect(axiosMock.post).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            Authorization: `Basic ${Buffer.from(
+              `${spotifySample1.clientId}:${spotifySample1.clientSecret}`,
+            ).toString('base64')}`,
+          }),
+        }),
+      );
     });
 
     it('should set access token cookie with expiry', async () => {

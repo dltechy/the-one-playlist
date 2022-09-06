@@ -56,6 +56,7 @@ import {
   spotifyLogin,
   spotifyLogout,
 } from '@app/modules/spotify/apis/spotify.api';
+import { SpotifyKeyManager } from '@app/modules/spotify/components/SpotifyKeyManager';
 import {
   connect as spotifyConnect,
   disconnect as spotifyDisconnect,
@@ -793,7 +794,23 @@ export const PlaylistManager: FC = () => {
                 </Box>
               </Stack>
 
-              <Box display="flex" width="100%" justifyContent="center">
+              <Stack
+                direction="row"
+                spacing={2}
+                width="100%"
+                justifyContent="center"
+              >
+                <Button
+                  variant="contained"
+                  onClick={(): void =>
+                    playerDispatch({
+                      type: PlayerActionType.OpenSpotifyKeyManager,
+                    })
+                  }
+                >
+                  Manage Spotify Keys
+                </Button>
+
                 {spotifyRefreshToken == null ? (
                   <Button
                     variant="contained"
@@ -809,7 +826,7 @@ export const PlaylistManager: FC = () => {
                     Logout from Spotify
                   </Button>
                 )}
-              </Box>
+              </Stack>
 
               {isShowingInfo ? (
                 <Box>
@@ -1116,6 +1133,8 @@ export const PlaylistManager: FC = () => {
           </Box>
         </Box>
       </Modal>
+
+      <SpotifyKeyManager />
 
       <Snackbar
         open={errorSnackbarMessage !== ''}

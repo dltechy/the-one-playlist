@@ -47,8 +47,30 @@ export class SpotifyService {
     return text;
   }
 
-  public login(): string {
-    const { clientId } = this.configService.get<SpotifyConfig>('spotify');
+  public setKeys({
+    clientId,
+    clientSecret,
+    res,
+  }: {
+    clientId: string;
+    clientSecret: string;
+    res: Response;
+  }): void {
+    if (clientId && clientSecret) {
+      res.cookie('spotifyClientId', clientId);
+      res.cookie('spotifyClientSecret', clientSecret);
+    } else {
+      res.clearCookie('spotifyClientId');
+      res.clearCookie('spotifyClientSecret');
+    }
+  }
+
+  public login({ req }: { req: Request }): string {
+    let clientId = req.cookies.spotifyClientId;
+
+    if (!clientId) {
+      ({ clientId } = this.configService.get<SpotifyConfig>('spotify'));
+    }
 
     const scope = [
       'streaming',
@@ -73,17 +95,24 @@ export class SpotifyService {
 
   public async loginCallback({
     code,
+    req,
     res,
   }: {
     code: string;
+    req: Request;
     res: Response;
   }): Promise<{
     accessToken: string;
     refreshToken: string;
     accessTokenExpiry: Date;
   }> {
-    const { clientId, clientSecret } =
-      this.configService.get<SpotifyConfig>('spotify');
+    let clientId = req.cookies.spotifyClientId;
+    let clientSecret = req.cookies.spotifyClientSecret;
+
+    if (!clientId || !clientSecret) {
+      ({ clientId, clientSecret } =
+        this.configService.get<SpotifyConfig>('spotify'));
+    }
 
     const url = 'https://accounts.spotify.com/api/token';
 
@@ -164,8 +193,13 @@ export class SpotifyService {
       throw new UnauthorizedException('Invalid/missing refresh token');
     }
 
-    const { clientId, clientSecret } =
-      this.configService.get<SpotifyConfig>('spotify');
+    let clientId = req.cookies.spotifyClientId;
+    let clientSecret = req.cookies.spotifyClientSecret;
+
+    if (!clientId || !clientSecret) {
+      ({ clientId, clientSecret } =
+        this.configService.get<SpotifyConfig>('spotify'));
+    }
 
     const url = 'https://accounts.spotify.com/api/token';
 

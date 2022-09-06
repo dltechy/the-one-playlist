@@ -59,6 +59,12 @@ describe('SpotifyController (routes)', () => {
 
   // Tests
 
+  it('should connect to "POST /spotify/auth/keys/set"', async () => {
+    await request(app.getHttpServer()).post('/spotify/auth/keys/set');
+
+    expect(spotifyServiceMock.setKeys).toHaveBeenCalled();
+  });
+
   it('should connect to "GET /spotify/auth/login"', async () => {
     spotifyServiceMock.login.mockReturnValue('');
 

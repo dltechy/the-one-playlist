@@ -32,6 +32,7 @@ import { GetTracksQueryDto } from './dtos/get-tracks-query.dto';
 import { LoginCallbackQueryDto } from './dtos/login-callback-query.dto';
 import { PlayTrackDto } from './dtos/play-track.dto';
 import { PlayTrackParamsDto } from './dtos/play-track-params.dto';
+import { SetKeysDto } from './dtos/set-keys.dto';
 import { SpotifyService } from './spotify.service';
 
 @ApiTags('Spotify')
@@ -42,13 +43,27 @@ export class SpotifyController {
     private readonly spotifyService: SpotifyService,
   ) {}
 
+  @Post('auth/keys/set')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Sets the Spotify keys as cookies' })
+  @ApiOkResponse({
+    description: 'Spotify keys successfully set',
+  })
+  @ApiBadRequestResponse({ description: 'Invalid input' })
+  public setKeys(
+    @Body() { clientId, clientSecret }: SetKeysDto,
+    @Res({ passthrough: true }) res: Response,
+  ): void {
+    this.spotifyService.setKeys({ clientId, clientSecret, res });
+  }
+
   @Get('auth/login')
   @ApiOperation({ summary: 'Redirects the user to the Spotify login page' })
   @ApiFoundResponse({
     description: 'User successfully redirected to the Spotify login page',
   })
-  public login(@Res() res: Response): void {
-    const authQueryParameters = this.spotifyService.login();
+  public login(@Req() req: Request, @Res() res: Response): void {
+    const authQueryParameters = this.spotifyService.login({ req });
 
     res.redirect(
       `https://accounts.spotify.com/authorize?${authQueryParameters}`,
@@ -63,12 +78,14 @@ export class SpotifyController {
   @ApiBadRequestResponse({ description: 'Invalid input' })
   public async loginCallback(
     @Query() { code }: LoginCallbackQueryDto,
+    @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
     const { webBaseUrl } = this.configService.get<AppConfig>('app');
 
     await this.spotifyService.loginCallback({
       code,
+      req,
       res,
     });
 

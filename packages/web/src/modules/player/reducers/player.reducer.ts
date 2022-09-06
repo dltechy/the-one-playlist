@@ -36,6 +36,9 @@ export enum PlayerActionType {
 
   OpenPlaylistManager = 'OPEN_PLAYLIST_MANAGER',
   ClosePlaylistManager = 'CLOSE_PLAYLIST_MANAGER',
+
+  OpenSpotifyKeyManager = 'OPEN_SPOTIFY_KEY_MANAGER',
+  CloseSpotifyKeyManager = 'CLOSE_SPOTIFY_KEY_MANAGER',
 }
 
 export interface PlayerAction {
@@ -63,6 +66,8 @@ export interface PlayerState {
   mediaIndex: number;
 
   isPlaylistManagerOpen: boolean;
+
+  isSpotifyKeyManagerOpen: boolean;
 }
 
 const shufflePlaylist = (
@@ -290,6 +295,13 @@ export const playerReducer = (
     }
     case PlayerActionType.ClosePlaylistManager: {
       return { ...state, isPlaylistManagerOpen: false };
+    }
+
+    case PlayerActionType.OpenSpotifyKeyManager: {
+      return { ...state, isSpotifyKeyManagerOpen: true };
+    }
+    case PlayerActionType.CloseSpotifyKeyManager: {
+      return { ...state, isSpotifyKeyManagerOpen: false };
     }
 
     default: {

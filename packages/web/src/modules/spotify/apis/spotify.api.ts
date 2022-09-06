@@ -7,8 +7,28 @@ import { MediaService } from '@app/modules/player/types/mediaService';
 import { PlaylistInfo } from '@app/modules/player/types/playlistInfo';
 import { PlaylistType } from '@app/modules/player/types/playlistType';
 
+export const spotifySetKeys = async (): Promise<void> => {
+  const url = `${process.env.NEXT_PUBLIC_APP_SERVER_BASE_URL}/spotify/auth/keys/set`;
+
+  const clientId = localStorage.getItem('spotifyClientId') ?? '';
+  const clientSecret = localStorage.getItem('spotifyClientSecret') ?? '';
+
+  await axios.post(
+    url,
+    {
+      clientId,
+      clientSecret,
+    },
+    {
+      withCredentials: true,
+    },
+  );
+};
+
 export const spotifyLogin = async (): Promise<void> => {
   const url = `${process.env.NEXT_PUBLIC_APP_SERVER_BASE_URL}/spotify/auth/login`;
+
+  await spotifySetKeys();
 
   window.open(url, '_blank');
 };
@@ -20,6 +40,8 @@ export const spotifyToken = async (): Promise<void> => {
   const refreshToken = cookies.spotifyRefreshToken;
 
   if (refreshToken) {
+    await spotifySetKeys();
+
     await axios.post(url, undefined, {
       withCredentials: true,
     });

@@ -64,6 +64,33 @@ describe('SpotifyController (validation)', () => {
 
   // Tests
 
+  describe('setKeys', () => {
+    const requiredBody = {
+      clientId: spotifySample1.clientId,
+      clientSecret: spotifySample1.clientSecret,
+    };
+
+    createBodyValidationTests({
+      appGetter: () => app,
+      requiredBody,
+      httpMethod: HttpMethod.Post,
+      path: '/spotify/auth/keys/set',
+      expectedSuccessStatusCode: 200,
+      propertyTestValues: [
+        {
+          property: 'clientId',
+          successValues: ['string', ''],
+          failValues: [],
+        },
+        {
+          property: 'clientSecret',
+          successValues: ['string', ''],
+          failValues: [],
+        },
+      ],
+    });
+  });
+
   describe('loginCallback', () => {
     const requiredQuery = {};
 

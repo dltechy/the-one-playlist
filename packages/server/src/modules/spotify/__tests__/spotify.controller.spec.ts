@@ -55,11 +55,25 @@ describe('SpotifyController', () => {
     expect(controller).toBeDefined();
   });
 
+  describe('setKeys', () => {
+    it('should call the "setKeys" service method', () => {
+      controller.setKeys(
+        {
+          clientId: spotifySample1.clientId,
+          clientSecret: spotifySample1.clientSecret,
+        },
+        resMock as {} as Response,
+      );
+
+      expect(spotifyServiceMock.setKeys).toHaveBeenCalled();
+    });
+  });
+
   describe('login', () => {
     it('should redirect to spotify login page', () => {
       spotifyServiceMock.login.mockReturnValue('');
 
-      controller.login(resMock as {} as Response);
+      controller.login(reqMock as {} as Request, resMock as {} as Response);
 
       expect(resMock.redirect).toHaveBeenCalled();
     });
@@ -73,6 +87,7 @@ describe('SpotifyController', () => {
 
       await controller.loginCallback(
         { code: spotifySample1.code },
+        reqMock as {} as Request,
         resMock as {} as Response,
       );
 

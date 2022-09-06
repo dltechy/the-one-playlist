@@ -7,6 +7,8 @@ import {
   SAMPLE_ALBUM_THUMBNAIL_URL,
   SAMPLE_ALBUM_TITLE,
   SAMPLE_CODE,
+  SAMPLE_CUSTOM_CLIENT_ID,
+  SAMPLE_CUSTOM_CLIENT_SECRET,
   SAMPLE_DEVICE_ID,
   SAMPLE_PLAYLIST_ID,
   SAMPLE_PLAYLIST_THUMBNAIL_URL,
@@ -314,6 +316,8 @@ function createSamples({
   duration: number;
 }): {
   code: string;
+  clientId: string;
+  clientSecret: string;
   tokens: {
     accessToken: string;
     refreshToken: string;
@@ -346,6 +350,8 @@ function createSamples({
   tracksResponse: { data: SpotifyApi.MultipleTracksResponse };
 } {
   const code = `${SAMPLE_CODE}${id}`;
+  const clientId = `${SAMPLE_CUSTOM_CLIENT_ID}${id}`;
+  const clientSecret = `${SAMPLE_CUSTOM_CLIENT_SECRET}${id}`;
   const tokens = createSampleTokens(id);
   const spotifyTokens = createSampleSpotifyTokens(id);
   const playlistId = `${SAMPLE_PLAYLIST_ID}${id}`;
@@ -377,6 +383,8 @@ function createSamples({
 
   return {
     code,
+    clientId,
+    clientSecret,
     tokens,
     spotifyTokens,
     playlistId,

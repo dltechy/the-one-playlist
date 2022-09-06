@@ -55,6 +55,8 @@ export const Player: FC = () => {
     mediaIndex: 0,
 
     isPlaylistManagerOpen: true,
+
+    isSpotifyKeyManagerOpen: false,
   });
 
   const contextState = useMemo<PlayerContextType>(

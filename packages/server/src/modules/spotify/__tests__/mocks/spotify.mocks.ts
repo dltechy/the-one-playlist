@@ -1,4 +1,5 @@
 export const spotifyServiceMock = {
+  setKeys: jest.fn(),
   login: jest.fn(),
   loginCallback: jest.fn(),
   token: jest.fn(),

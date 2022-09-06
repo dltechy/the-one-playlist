@@ -3,6 +3,7 @@ import {
   AppBar,
   Box,
   Button,
+  Divider,
   List,
   ListItem,
   Stack,
@@ -135,6 +136,26 @@ export const Header: FC = () => {
                   </Button>
                 </Link>
                 <Link
+                  href="https://www.youtube.com/watch?v=XLXWSn2FkA8"
+                  passHref
+                >
+                  <Button
+                    variant="text"
+                    href=""
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Typography
+                      component="span"
+                      color="white"
+                      textTransform="none"
+                    >
+                      How-To
+                    </Typography>
+                  </Button>
+                </Link>
+                <Divider orientation="vertical" flexItem />
+                <Link
                   href="https://github.com/dltechy/the-one-playlist"
                   passHref
                 >
@@ -233,6 +254,25 @@ export const Header: FC = () => {
                     textTransform="none"
                   >
                     Player
+                  </Typography>
+                </Button>
+              </Link>
+            </ListItem>
+            <ListItem divider>
+              <Link href="https://www.youtube.com/watch?v=XLXWSn2FkA8" passHref>
+                <Button
+                  variant="text"
+                  href=""
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  fullWidth
+                >
+                  <Typography
+                    component="span"
+                    color="white"
+                    textTransform="none"
+                  >
+                    How-To
                   </Typography>
                 </Button>
               </Link>

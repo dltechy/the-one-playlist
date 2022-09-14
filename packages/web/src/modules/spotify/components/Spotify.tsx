@@ -91,17 +91,13 @@ export const Spotify: FC = () => {
         if (isActiveService) {
           if (isPlaying === paused) {
             if (paused) {
-              if (isPlaying && position === 0) {
+              if (position === 0 && prevPlayerState.current.position !== 0) {
                 if (isRepeatOn && mediaIds.length === 1) {
-                  await player?.seek(0);
                   await player?.resume();
                 } else {
-                  await player?.pause();
-                  await player?.seek(0);
-
                   playerDispatch({ type: PlayerActionType.EndMedia });
                 }
-              } else if (paused) {
+              } else {
                 playerDispatch({ type: PlayerActionType.Pause });
               }
             } else {
@@ -115,13 +111,8 @@ export const Spotify: FC = () => {
 
         prevPlayerState.current.paused = paused;
       } else if (position >= _duration) {
-        if (isActiveService && isRepeatOn && mediaIds.length === 1) {
-          await player?.seek(0);
-          await player?.resume();
-        } else {
-          await player?.pause();
-          await player?.seek(0);
-        }
+        await player?.pause();
+        await player?.seek(0);
       }
 
       if (_duration !== duration && isActiveService) {

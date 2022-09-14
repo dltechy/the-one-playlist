@@ -100,7 +100,9 @@ export const PlaylistManager: FC = () => {
 
   const [isLoadingMedia, setIsLoadingMedia] = useState(true);
 
-  const [spotifyRefreshToken, setSpotifyRefreshToken] = useState('');
+  const [spotifyRefreshToken, setSpotifyRefreshToken] = useState<string | null>(
+    null,
+  );
 
   const [errorSnackbarMessage, setErrorSnackbarMessage] = useState('');
 
@@ -130,9 +132,6 @@ export const PlaylistManager: FC = () => {
     useState(playlistInfoList);
   const [tempMediaInfoList, setTempMediaInfoList] = useState(mediaInfoList);
   const prevIsPlaylistManagerOpen = useRef(!isPlaylistManagerOpen);
-
-  const [tick, setTick] = useState(false);
-  const prevTick = useRef(!tick);
 
   // General methods
 
@@ -219,6 +218,18 @@ export const PlaylistManager: FC = () => {
 
   // Effects
 
+  // Update login state
+  useEffect(() => {
+    const cookies = cookie.parse(document.cookie);
+    setSpotifyRefreshToken(cookies.spotifyRefreshToken);
+
+    if (cookies.spotifyRefreshToken != null) {
+      spotifyConnect().catch();
+    } else {
+      spotifyDisconnect();
+    }
+  }, []);
+
   // This is required to make react-beautiful-dnd work with react strict mode
   useEffect(() => {
     if (isPlaylistManagerOpen !== prevIsPlaylistManagerOpen.current) {
@@ -239,23 +250,6 @@ export const PlaylistManager: FC = () => {
       inputRef.current?.focus();
     }
   }, [isEnabled]);
-
-  // Update login state
-  useEffect(() => {
-    if (tick !== prevTick.current) {
-      const cookies = cookie.parse(document.cookie);
-      setSpotifyRefreshToken(cookies.spotifyRefreshToken);
-
-      if (cookies.spotifyRefreshToken != null) {
-        spotifyConnect().catch();
-      } else {
-        spotifyDisconnect();
-      }
-
-      prevTick.current = tick;
-      setTimeout(() => setTick((prev) => !prev), 1000);
-    }
-  }, [tick]);
 
   // Set playlist item IDs
   useEffect(() => {
@@ -821,7 +815,11 @@ export const PlaylistManager: FC = () => {
                 ) : (
                   <Button
                     variant="outlined"
-                    onClick={(): Promise<void> => spotifyLogout().catch()}
+                    onClick={(): Promise<void> =>
+                      spotifyLogout()
+                        .then(() => setSpotifyRefreshToken(null))
+                        .catch()
+                    }
                   >
                     Logout from Spotify
                   </Button>

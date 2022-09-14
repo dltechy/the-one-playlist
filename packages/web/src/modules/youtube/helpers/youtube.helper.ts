@@ -1,3 +1,5 @@
+import AsyncLock from 'async-lock';
+
 import { sleep } from '@app/helpers/timeout/sleep.helper';
 import { MediaInfoList } from '@app/modules/player/types/mediaInfoList';
 import { MediaService } from '@app/modules/player/types/mediaService';
@@ -9,39 +11,43 @@ import {
   getYouTubeVideoDetails,
 } from '../apis/youtube.api';
 
+const lock = new AsyncLock();
+
 let player: YT.Player;
 
 export const loadPlayer = async (elementName: string): Promise<YT.Player> => {
-  while (!window.YT?.Player) {
-    // eslint-disable-next-line no-await-in-loop
-    await sleep(1000);
-  }
+  return lock.acquire('loadPlayer', async (done): Promise<void> => {
+    while (!window.YT?.Player) {
+      // eslint-disable-next-line no-await-in-loop
+      await sleep(1000);
+    }
 
-  if (player) {
-    player.destroy();
-  }
+    if (player) {
+      player.destroy();
+    }
 
-  const host = process.env.NEXT_PUBLIC_APP_HOST;
+    const host = process.env.NEXT_PUBLIC_APP_HOST;
 
-  player = await new Promise<YT.Player>((resolve) => {
-    const _player = new window.YT.Player(elementName, {
-      width: '100%',
-      height: '100%',
-      playerVars: {
-        autoplay: 1,
-        playsinline: 1,
-        enablejsapi: 1,
-        origin: host,
-      },
-      events: {
-        onReady: (): void => {
-          resolve(_player);
+    player = await new Promise<YT.Player>((resolve) => {
+      const _player = new window.YT.Player(elementName, {
+        width: '100%',
+        height: '100%',
+        playerVars: {
+          autoplay: 1,
+          playsinline: 1,
+          enablejsapi: 1,
+          origin: host,
         },
-      },
+        events: {
+          onReady: (): void => {
+            resolve(_player);
+          },
+        },
+      });
     });
-  });
 
-  return player;
+    done(undefined, player);
+  });
 };
 
 export const getBaseYouTubePlaylistInfo = (
@@ -76,38 +82,43 @@ export const getYouTubePlaylistInfo = async (
   playlistInfo?: PlaylistInfo;
   mediaInfo?: MediaInfoList[MediaService.YouTube];
 }> => {
-  const { service, type, id } = playlistInfo;
+  return lock.acquire('getYouTubePlaylistInfo', async (done): Promise<void> => {
+    const { service, type, id } = playlistInfo;
 
-  switch (type) {
-    case PlaylistType.Playlist: {
-      return {
-        playlistInfo: await getYouTubePlaylistDetails(id),
-      };
-    }
-    case PlaylistType.Video: {
-      const { [id]: media } = await getYouTubeVideoDetails([id]);
-
-      if (media) {
-        return {
-          playlistInfo: {
-            service,
-            type,
-            id,
-            title: media.title,
-            thumbnail: media.thumbnail,
-            itemCount: 1,
-            mediaIds: [id],
-          },
-          mediaInfo: {
-            [id]: media,
-          },
-        };
+    switch (type) {
+      case PlaylistType.Playlist: {
+        done(undefined, {
+          playlistInfo: await getYouTubePlaylistDetails(id),
+        });
+        return;
       }
+      case PlaylistType.Video: {
+        const { [id]: media } = await getYouTubeVideoDetails([id]);
 
-      return {};
+        if (media) {
+          done(undefined, {
+            playlistInfo: {
+              service,
+              type,
+              id,
+              title: media.title,
+              thumbnail: media.thumbnail,
+              itemCount: 1,
+              mediaIds: [id],
+            },
+            mediaInfo: {
+              [id]: media,
+            },
+          });
+          return;
+        }
+
+        done(undefined, {});
+        return;
+      }
+      default: {
+        done(undefined, {});
+      }
     }
-    default: {
-      return {};
-    }
-  }
+  });
 };

@@ -1,9 +1,6 @@
-import { Visibility, VisibilityOff } from '@mui/icons-material';
 import {
   Box,
   Button,
-  IconButton,
-  InputAdornment,
   Modal,
   Stack,
   TextField,
@@ -102,24 +99,6 @@ export const SpotifyKeyManager: FC = () => {
               type={isClientSecretVisible ? 'text' : 'password'}
               fullWidth
               value={clientSecret}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="Toggle Spotify client secret visibility"
-                      onClick={(): void =>
-                        setIsClientSecretVisible((prev) => !prev)
-                      }
-                    >
-                      {isClientSecretVisible ? (
-                        <Visibility />
-                      ) : (
-                        <VisibilityOff />
-                      )}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
               onChange={(event): void =>
                 setClientSecret(event.target.value.trim())
               }

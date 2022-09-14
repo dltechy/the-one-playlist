@@ -91,7 +91,9 @@ describe('SpotifyController', () => {
         resMock as {} as Response,
       );
 
-      expect(resMock.redirect).toHaveBeenCalledWith(`${webBaseUrl}/close`);
+      expect(resMock.redirect).toHaveBeenCalledWith(
+        `${webBaseUrl}/login-complete`,
+      );
     });
   });
 

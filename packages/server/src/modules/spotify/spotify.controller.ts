@@ -89,7 +89,7 @@ export class SpotifyController {
       res,
     });
 
-    res.redirect(`${webBaseUrl}/close`);
+    res.redirect(`${webBaseUrl}/login-complete`);
   }
 
   @Post('auth/token')

@@ -286,6 +286,7 @@ describe('SpotifyService', () => {
         2,
         'spotifyRefreshToken',
         spotifySample1.tokens.refreshToken,
+        { expires: expect.any(Date) },
       );
     });
 
@@ -516,6 +517,7 @@ describe('SpotifyService', () => {
         2,
         'spotifyRefreshToken',
         spotifySample2.tokens.refreshToken,
+        { expires: expect.any(Date) },
       );
     });
 

@@ -21,6 +21,8 @@ import { PlaylistInfo } from '@app/types/playlist-info';
 
 @Injectable()
 export class SpotifyService {
+  private REFRESH_TOKEN_EXPIRES_IN = 365 * 24 * 60 * 60 * 1000;
+
   private loginRedirectUri: string;
 
   constructor(
@@ -151,7 +153,9 @@ export class SpotifyService {
           expires: accessTokenExpiry,
         });
 
-        res.cookie('spotifyRefreshToken', refreshToken);
+        res.cookie('spotifyRefreshToken', refreshToken, {
+          expires: new Date(now + this.REFRESH_TOKEN_EXPIRES_IN),
+        });
 
         return {
           accessToken,
@@ -238,7 +242,13 @@ export class SpotifyService {
         });
 
         if (newRefreshToken) {
-          res.cookie('spotifyRefreshToken', newRefreshToken);
+          res.cookie('spotifyRefreshToken', newRefreshToken, {
+            expires: new Date(now + this.REFRESH_TOKEN_EXPIRES_IN),
+          });
+        } else {
+          res.cookie('spotifyRefreshToken', refreshToken, {
+            expires: new Date(now + this.REFRESH_TOKEN_EXPIRES_IN),
+          });
         }
 
         return {

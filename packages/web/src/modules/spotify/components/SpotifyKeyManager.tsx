@@ -9,6 +9,7 @@ import {
   TextField,
   useMediaQuery,
 } from '@mui/material';
+import Link from 'next/link';
 import { FC, useContext, useEffect, useState } from 'react';
 
 import {
@@ -123,6 +124,19 @@ export const SpotifyKeyManager: FC = () => {
                 setClientSecret(event.target.value.trim())
               }
             />
+
+            <Box alignSelf="center">
+              <Link href="https://developer.spotify.com/dashboard/" passHref>
+                <Button
+                  variant="contained"
+                  href=""
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Spotify Developer Dashboard
+                </Button>
+              </Link>
+            </Box>
 
             <Stack direction="row-reverse" spacing={1}>
               <Box width={96}>

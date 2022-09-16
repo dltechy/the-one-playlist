@@ -27,7 +27,7 @@ export const YouTube: FC = () => {
 
   const PLAYER_ID = 'youtube-player';
 
-  const player = useRef<YT.Player>();
+  const player = useRef<YT.Player | null>(null);
 
   const {
     playerState: {
@@ -169,7 +169,7 @@ export const YouTube: FC = () => {
       .catch();
 
     return () => {
-      player.current = undefined;
+      player.current = null;
     };
   }, []);
 

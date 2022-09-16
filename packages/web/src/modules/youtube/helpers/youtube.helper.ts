@@ -13,9 +13,11 @@ import {
 
 const lock = new AsyncLock();
 
-let player: YT.Player;
+let player: YT.Player | null = null;
 
-export const loadPlayer = async (elementName: string): Promise<YT.Player> => {
+export const loadPlayer = async (
+  elementName: string,
+): Promise<YT.Player | null> => {
   return lock.acquire('loadPlayer', async (done): Promise<void> => {
     while (!window.YT?.Player) {
       // eslint-disable-next-line no-await-in-loop
@@ -24,29 +26,43 @@ export const loadPlayer = async (elementName: string): Promise<YT.Player> => {
 
     if (player) {
       player.destroy();
+
+      player = null;
     }
 
     const host = process.env.NEXT_PUBLIC_APP_HOST;
 
-    player = await new Promise<YT.Player>((resolve) => {
-      const _player = new window.YT.Player(elementName, {
-        width: '100%',
-        height: '100%',
-        playerVars: {
-          autoplay: 1,
-          playsinline: 1,
-          enablejsapi: 1,
-          origin: host,
-        },
-        events: {
-          onReady: (): void => {
-            resolve(_player);
-          },
-        },
-      });
+    const _player = new window.YT.Player(elementName, {
+      width: '100%',
+      height: '100%',
+      playerVars: {
+        autoplay: 1,
+        playsinline: 1,
+        enablejsapi: 1,
+        origin: host,
+      },
     });
 
-    done(undefined, player);
+    let cleanup: (() => void) | null = null;
+
+    const onReadyListener = (): void => {
+      player = _player;
+      cleanup?.();
+    };
+
+    const onErrorListener = (): void => {
+      cleanup?.();
+    };
+
+    cleanup = (): void => {
+      _player?.removeEventListener('onReady', onReadyListener);
+      _player?.removeEventListener('onError', onErrorListener);
+
+      done(undefined, player);
+    };
+
+    _player.addEventListener('onReady', onReadyListener);
+    _player.addEventListener('onError', onErrorListener);
   });
 };
 

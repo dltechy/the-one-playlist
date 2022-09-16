@@ -9,31 +9,40 @@ export const getYouTubePlaylistVideoIds = (
     div.style.display = 'none';
     document.body.appendChild(div);
 
-    const cleanup = (player: YT.Player): void => {
-      player.destroy();
+    let player: YT.Player | null = null;
+    let cleanup: (() => void) | null = null;
+
+    const onReadyListener = (): void => {
+      resolve(player?.getPlaylist() ?? []);
+      cleanup?.();
+    };
+
+    const onErrorListener = (): void => {
+      resolve([]);
+      cleanup?.();
+    };
+
+    cleanup = (): void => {
+      player?.removeEventListener('onReady', onReadyListener);
+      player?.removeEventListener('onError', onErrorListener);
+
+      player?.destroy();
 
       document.body.removeChild(
         document.getElementById(PLAYER_ID) as HTMLElement,
       );
     };
 
-    const player = new window.YT.Player(PLAYER_ID, {
+    player = new window.YT.Player(PLAYER_ID, {
       playerVars: {
         listType: 'playlist',
         list: playlistId,
         playsinline: 1,
       },
-      events: {
-        onReady: (): void => {
-          resolve(player.getPlaylist());
-          cleanup(player);
-        },
-        onError: (): void => {
-          resolve([]);
-          cleanup(player);
-        },
-      },
     });
+
+    player.addEventListener('onReady', onReadyListener);
+    player.addEventListener('onError', onErrorListener);
   });
 
   return getYouTubePlaylistVideoIdsPromise;
